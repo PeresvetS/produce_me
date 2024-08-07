@@ -2,6 +2,7 @@
 
 const axios = require('axios');
 const config = require('../config/config');
+const FormData = require('form-data');
 const fs = require('fs').promises;
 const path = require('path');
 const logger = require('../utils/logger');
@@ -128,5 +129,58 @@ Timestamp: ${new Date().toISOString()}
       console.error('Error reading conversation log:', error);
       throw error;
     }
+  },
+
+  async sendFile(userId, filePath) {
+    logger.info(`Sending file for user ${userId} to GoAPI`);
+    try {
+      let conversationId = await subscriptionService.getUserConversationId(userId);
+      const url = conversationId 
+        ? `${config.goapiUrl}/conversation/${conversationId}/file`
+        : `${config.goapiUrl}/conversation/file`;
+
+      const formData = new FormData();
+      formData.append('file', fs.createReadStream(filePath));
+
+      const response = await axios.post(url, formData, {
+        headers: {
+          ...formData.getHeaders(),
+          'X-API-Key': config.goapiKey,
+        },
+      });
+
+      logger.info(`Response received from GoAPI. Status: ${response.status}`);
+
+      if (!conversationId && response.data.conversation_id) {
+        conversationId = response.data.conversation_id;
+        await subscriptionService.setUserConversationId(userId, conversationId);
+      }
+
+      // Обработка ответа от GoAPI
+      if (response.data.type === 'text') {
+        return {
+          type: 'text',
+          content: this.convertMarkdownToHtml(response.data.content)
+        };
+      } else if (response.data.type === 'image') {
+        return {
+          type: 'image',
+          content: response.data.content // предполагается, что это base64-encoded изображение
+        };
+      } else {
+        throw new Error('Unsupported response type from GoAPI');
+      }
+    } catch (error) {
+      logger.error('Error sending file to GoAPI:', error);
+      throw error;
+    }
+  },
+
+  convertMarkdownToHtml(markdown) {
+    return markdown
+      .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>') // Жирный текст
+      .replace(/\*(.*?)\*/g, '<i>$1</i>')     // Курсив
+      .replace(/`(.*?)`/g, '<code>$1</code>') // Код
+      .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2">$1</a>'); // Ссылки
   }
 };

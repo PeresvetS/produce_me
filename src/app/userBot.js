@@ -1,6 +1,10 @@
 // userBot.js
 
 const { Telegraf } = require('telegraf');
+const { Telegraf } = require('telegraf');
+const axios = require('axios');
+const fs = require('fs');
+const path = require('path');
 const config = require('../config/config');
 const subscriptionService = require('../services/subscriptionService');
 const dialogService = require('../services/dialogService');
@@ -83,6 +87,65 @@ bot.on('text', async (ctx) => {
       logger.error('Error request:', error.request);
     }
     ctx.reply('Произошла ошибка при обработке твоего сообщения Пожалуйста, попробуй ещё раз');
+  }
+});
+
+bot.on(['photo', 'document'], async (ctx) => {
+  const userId = ctx.from.id;
+
+  try {
+    const subscriptionStatus = await subscriptionService.checkSubscription(userId);
+    if (!subscriptionStatus) {
+      ctx.reply('У тебя нет активной подписки Пожалуйста, обнови твою подписку через @neuro_zen_helps');
+      return;
+    }
+
+    ctx.sendChatAction('upload_photo');
+
+    let fileId;
+    let fileName;
+    if (ctx.message.photo) {
+      fileId = ctx.message.photo[ctx.message.photo.length - 1].file_id;
+      fileName = 'image.jpg';
+    } else {
+      fileId = ctx.message.document.file_id;
+      fileName = ctx.message.document.file_name;
+    }
+
+    const fileLink = await ctx.telegram.getFileLink(fileId);
+    const response = await axios({
+      method: 'get',
+      url: fileLink.href,
+      responseType: 'stream'
+    });
+
+    const tempFilePath = path.join(__dirname, '../../temp', fileName);
+    const writer = fs.createWriteStream(tempFilePath);
+    response.data.pipe(writer);
+
+    await new Promise((resolve, reject) => {
+      writer.on('finish', resolve);
+      writer.on('error', reject);
+    });
+
+    const goapiResponse = await goapiService.sendFile(userId, tempFilePath);
+
+    fs.unlink(tempFilePath, (err) => {
+      if (err) logger.error('Error deleting temp file:', err);
+    });
+
+    await subscriptionCacheService.logMessage(userId);
+
+    if (goapiResponse.type === 'text') {
+      await ctx.reply(goapiResponse.content, { parse_mode: 'HTML' });
+    } else if (goapiResponse.type === 'image') {
+      await ctx.replyWithPhoto({ source: Buffer.from(goapiResponse.content, 'base64') });
+    } else {
+      await ctx.reply('Получен неподдерживаемый тип ответа от AI');
+    }
+  } catch (error) {
+    logger.error('Error processing file:', error);
+    ctx.reply('Произошла ошибка при обработке файла Пожалуйста, попробуй ещё раз');
   }
 });
 
