@@ -1,7 +1,6 @@
 // userBot.js
 
 const { Telegraf } = require('telegraf');
-const { Telegraf } = require('telegraf');
 const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
