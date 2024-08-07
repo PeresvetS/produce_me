@@ -14,6 +14,8 @@ const requiredEnvVars = [
   'AIRTABLE_API_KEY',
   'AIRTABLE_BASE_ID',
   'AIRTABLE_USERS_TABLE_ID',
+  'AIRTABLE_ADMINS_TABLE_ID',
+  'GROQ_API_KEY',
   'GOAPI_KEY',
   'GIZMO_ID'
 ];
@@ -33,9 +35,11 @@ const config = {
   airtableApiKey: process.env.AIRTABLE_API_KEY,
   airtableBaseId: process.env.AIRTABLE_BASE_ID,
   airtableUsersTableId: process.env.AIRTABLE_USERS_TABLE_ID,
+  airtableAdminsTableId: process.env.AIRTABLE_ADMINS_TABLE_ID,
   goapiKey: process.env.GOAPI_KEY,
   goapiUrl: 'https://api.goapi.xyz/api/chatgpt/v1',
   gizmoId: process.env.GIZMO_ID,
+  GROQ_API_KEY: process.env.GROQ_API_KEY
 };
 
 // Добавляем логирование для отладки

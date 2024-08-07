@@ -13,6 +13,9 @@ const logger = require('../utils/logger');
 
 const bot = new Telegraf(config.telegramToken);
 
+// Хранилище для контекста разговоров
+const conversations = new Map();
+
 async function startNewDialog(ctx, isNewProducer = false) {
   const userId = ctx.from.id;
   const username = ctx.from.username;
@@ -24,8 +27,9 @@ async function startNewDialog(ctx, isNewProducer = false) {
     ctx.reply(message);
     await dialogService.incrementNewDialogCount(userId);
     await subscriptionService.setUserConversationId(userId, null);
+    conversations.set(userId, []);
   } else {
-    ctx.reply('У тебя нет активной подписки Пожалуйста, обнови твою подписку через @neuro_zen_helps');
+    ctx.reply('У тебя нет активной подписки. Пожалуйста, обнови твою подписку через @neuro_zen_helps');
   }
 }
 
@@ -47,7 +51,7 @@ bot.on('text', async (ctx) => {
     logger.info(`Subscription status for user ${userId}: ${subscriptionStatus}`);
     
     if (!subscriptionStatus) {
-      ctx.reply('У тебя нет активной подписки Пожалуйста, обнови твою подписку через @neuro_zen_helps');
+      ctx.reply('У тебя нет активной подписки. Пожалуйста, обнови твою подписку через @neuro_zen_helps');
       return;
     }
 
@@ -55,16 +59,12 @@ bot.on('text', async (ctx) => {
 
     logger.info(`Sending message to GoAPI for user ${userId}`);
     let response = await goapiService.sendMessage(userId, message);
-    logger.info(`Received response from GoAPI for user ${userId}`);
+    logger.info(`Received response from GoAPI for user ${userId}: ${response}`);
     
     await subscriptionCacheService.logMessage(userId);
+    await dialogService.incrementDialogCount(userId);
 
-    // Конвертируем Markdown в HTML
-    response = response.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>') // Жирный текст
-                       .replace(/\*(.*?)\*/g, '<i>$1</i>')     // Курсив
-                       .replace(/`(.*?)`/g, '<code>$1</code>') // Код
-                       .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2">$1</a>'); // Ссылки
-
+    // Отправляем ответ пользователю
     const maxLength = 4096;
     if (response.length <= maxLength) {
       await ctx.reply(response, { parse_mode: 'HTML' });
@@ -75,42 +75,24 @@ bot.on('text', async (ctx) => {
       }
     }
   } catch (error) {
-    logger.error('Error processing message:', error.message);
-    if (error.response) {
-      logger.error('Error response:', {
-        data: error.response.data,
-        status: error.response.status,
-        headers: error.response.headers,
-      });
-    } else if (error.request) {
-      logger.error('Error request:', error.request);
-    }
-    ctx.reply('Произошла ошибка при обработке твоего сообщения Пожалуйста, попробуй ещё раз');
+    logger.error('Error processing message:', error);
+    logger.error('Error stack:', error.stack);
+    ctx.reply('Произошла ошибка при обработке твоего сообщения. Пожалуйста, попробуй ещё раз или обратись в службу поддержки.');
   }
 });
-
-bot.on(['photo', 'document'], async (ctx) => {
+bot.on('voice', async (ctx) => {
   const userId = ctx.from.id;
 
   try {
     const subscriptionStatus = await subscriptionService.checkSubscription(userId);
     if (!subscriptionStatus) {
-      ctx.reply('У тебя нет активной подписки Пожалуйста, обнови твою подписку через @neuro_zen_helps');
+      ctx.reply('У тебя нет активной подписки. Пожалуйста, обнови твою подписку через @neuro_zen_helps');
       return;
     }
 
-    ctx.sendChatAction('upload_photo');
+    ctx.sendChatAction('typing');
 
-    let fileId;
-    let fileName;
-    if (ctx.message.photo) {
-      fileId = ctx.message.photo[ctx.message.photo.length - 1].file_id;
-      fileName = 'image.jpg';
-    } else {
-      fileId = ctx.message.document.file_id;
-      fileName = ctx.message.document.file_name;
-    }
-
+    const fileId = ctx.message.voice.file_id;
     const fileLink = await ctx.telegram.getFileLink(fileId);
     const response = await axios({
       method: 'get',
@@ -118,7 +100,7 @@ bot.on(['photo', 'document'], async (ctx) => {
       responseType: 'stream'
     });
 
-    const tempFilePath = path.join(__dirname, '../../temp', fileName);
+    const tempFilePath = path.join(__dirname, '../../temp', `voice_${userId}_${Date.now()}.ogg`);
     const writer = fs.createWriteStream(tempFilePath);
     response.data.pipe(writer);
 
@@ -127,24 +109,87 @@ bot.on(['photo', 'document'], async (ctx) => {
       writer.on('error', reject);
     });
 
-    const goapiResponse = await goapiService.sendFile(userId, tempFilePath);
+    const aiResponse = await goapiService.processVoiceMessage(userId, tempFilePath);
 
     fs.unlink(tempFilePath, (err) => {
       if (err) logger.error('Error deleting temp file:', err);
     });
 
     await subscriptionCacheService.logMessage(userId);
+    await dialogService.incrementDialogCount(userId);
 
-    if (goapiResponse.type === 'text') {
-      await ctx.reply(goapiResponse.content, { parse_mode: 'HTML' });
-    } else if (goapiResponse.type === 'image') {
-      await ctx.replyWithPhoto({ source: Buffer.from(goapiResponse.content, 'base64') });
-    } else {
-      await ctx.reply('Получен неподдерживаемый тип ответа от AI');
-    }
+    ctx.reply(aiResponse);
   } catch (error) {
-    logger.error('Error processing file:', error);
-    ctx.reply('Произошла ошибка при обработке файла Пожалуйста, попробуй ещё раз');
+    logger.error('Error processing voice message:', error);
+    ctx.reply('Произошла ошибка при обработке голосового сообщения. Пожалуйста, попробуйте еще раз.');
+  }
+});
+
+
+bot.command('mindmap', async (ctx) => {
+  const userId = ctx.from.id;
+  const topic = ctx.message.text.split('/mindmap ')[1];
+
+  if (!topic) {
+    ctx.reply('Пожалуйста, укажите тему для mindmap. Например: /mindmap Искусственный интеллект');
+    return;
+  }
+
+  try {
+    const subscriptionStatus = await subscriptionService.checkSubscription(userId);
+    if (!subscriptionStatus) {
+      ctx.reply('У тебя нет активной подписки. Пожалуйста, обнови твою подписку через @neuro_zen_helps');
+      return;
+    }
+
+    ctx.sendChatAction('upload_photo');
+
+    const mindmapJSON = await goapiService.createMindMapJSON(userId, topic);
+
+    // Создаем диаграмму
+    const $ = go.GraphObject.make;
+    const diagram = $(go.Diagram, {
+      initialContentAlignment: go.Spot.Center,
+      layout: $(go.TreeLayout, {
+        angle: 90,
+        nodeSpacing: 10,
+        layerSpacing: 40,
+      }),
+    });
+
+    // Определяем шаблон узла
+    diagram.nodeTemplate =
+      $(go.Node, "Auto",
+        $(go.Shape, "RoundedRectangle",
+          { fill: "white" },
+          new go.Binding("fill", "brush")),
+        $(go.TextBlock,
+          { margin: 5 },
+          new go.Binding("text", "text"))
+      );
+
+    // Загружаем модель из JSON
+    diagram.model = go.Model.fromJson(JSON.stringify(mindmapJSON));
+
+    // Создаем canvas и рендерим диаграмму
+    const canvas = createCanvas(800, 600);
+    diagram.makeImage({
+      scale: 1,
+      background: "white",
+      type: "image/png",
+      returnType: "canvas",
+      callback: (canvas) => {
+        // Отправляем изображение пользователю
+        ctx.replyWithPhoto({ source: canvas.toBuffer() });
+      }
+    });
+
+    await subscriptionCacheService.logMessage(userId);
+    await dialogService.incrementDialogCount(userId);
+
+  } catch (error) {
+    logger.error('Error creating mindmap:', error);
+    ctx.reply('Произошла ошибка при создании mindmap. Пожалуйста, попробуйте еще раз или обратитесь в службу поддержки.');
   }
 });
 

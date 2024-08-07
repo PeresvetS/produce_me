@@ -4,9 +4,21 @@ const { Telegraf } = require('telegraf');
 const config = require('../config/config');
 const subscriptionService = require('../services/subscriptionService');
 const subscriptionCacheService = require('../services/subscriptionCacheService');
+const adminService = require('../services/adminService');
 const logger = require('../utils/logger');
 
 const adminBot = new Telegraf(config.adminBotToken);
+
+// Middleware для проверки прав администратора
+adminBot.use(async (ctx, next) => {
+  const userId = ctx.from.id;
+  if (await adminService.isAdmin(userId)) {
+    return next();
+  } else {
+    logger.warn(`Unauthorized access attempt by user ${userId}`);
+    return ctx.reply('У вас нет прав для выполнения этой команды.');
+  }
+});
 
 adminBot.command('stats', async (ctx) => {
   logger.info('Stats command received in admin bot');
@@ -25,6 +37,7 @@ adminBot.command('stats', async (ctx) => {
     ctx.reply('Произошла ошибка при получении статистики');
   }
 });
+
 
 adminBot.command('users', async (ctx) => {
   try {
@@ -113,5 +126,7 @@ adminBot.command('getlog', async (ctx) => {
     ctx.reply('Произошла ошибка при получении лога переписки.');
   }
 });
+
+
 
 module.exports = adminBot;

@@ -1,3 +1,5 @@
+# .gitignore
+
 # Зависимости
 node_modules/
 package-lock.json

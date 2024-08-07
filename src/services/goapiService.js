@@ -6,9 +6,9 @@ const FormData = require('form-data');
 const fs = require('fs').promises;
 const path = require('path');
 const logger = require('../utils/logger');
-const util = require('util');
 const documentReader = require('./documentReader');
 const subscriptionService = require('./subscriptionService');
+const groqService = require('./groqService');
 
 
 module.exports = {
@@ -20,29 +20,52 @@ module.exports = {
         ? `${config.goapiUrl}/conversation/${conversationId}`
         : `${config.goapiUrl}/conversation`;
 
-        let content = message;
-        if (message.startsWith('https') && (message.includes('docs.google.com') || message.includes('docs.yandex.ru'))) {
-          try {
-            
-            content = await documentReader.readDocument(message);
-            logger.info(`Document content read successfully for user ${userId}`);
-          } catch (error) {
-            logger.error('Error reading document:', error);
-            return 'Не удалось прочитать документ. Пожалуйста, убедитесь, что ссылка корректна и документ доступен для чтения.';
-          }
-        }
-
       logger.info(`Using URL: ${url}`);
-      logger.info(`Using API Key: ${config.goapiKey.substring(0, 5)}...`);
 
-      const response = await axios.post(url, {
-        model: 'gpt-4o',
-        content: {
-          content_type: 'text',
-          parts: [message]
-        },
-        gizmo_id: config.gizmoId
-      }, {
+      let content = message;
+      let originalUserText = '';
+      const urlRegex = /(https?:\/\/[^\s]+)/g;
+      const urls = message.match(urlRegex);
+
+      if (urls && (urls[0].includes('docs.google.com') || urls[0].includes('docs.yandex.ru'))) {
+        const documentUrl = urls[0];
+        originalUserText = message.replace(documentUrl, '').trim();
+        
+        try {
+          const documentContent = await documentReader.readDocument(documentUrl);
+          logger.info(`Document content read successfully for user ${userId}`);
+          if (documentContent.trim() === '') {
+            return 'Не удалось прочитать содержимое документа. Возможно, документ пуст или у меня нет доступа к нему.';
+          }
+          content = `Содержимое документа по ссылке ${documentUrl}:\n\n${documentContent}\n\n`;
+          if (originalUserText) {
+            content += `Также мой запрос: ${originalUserText}\n\n`;
+          }
+          content += `Пожалуйста, проанализируй этот документ, он важен для нашего диалога.`;
+        } catch (error) {
+          logger.error('Error reading document:', error);
+          return `Не удалось прочитать документ: ${error.message}. Пожалуйста, убедитесь, что ссылка корректна, документ доступен для чтения и не является приватным.`;
+        }
+      }
+
+      const requestData = conversationId
+        ? {
+            content: {
+              content_type: "text",
+              parts: [content]
+            }
+          }
+        : {
+            model: 'gpt-4o',
+            content: {
+              content_type: "text",
+              parts: [content]
+            }
+          };
+
+      logger.info(`Request data: ${JSON.stringify(requestData)}`);
+
+      const response = await axios.post(url, requestData, {
         headers: {
           'X-API-Key': config.goapiKey,
           'Content-Type': 'application/json'
@@ -58,14 +81,14 @@ module.exports = {
       for await (const chunk of response.data) {
         buffer += chunk.toString();
         let lines = buffer.split('\n');
-        buffer = lines.pop(); // Keep the last incomplete line in the buffer
+        buffer = lines.pop();
 
         for (const line of lines) {
           if (line.startsWith('data: ')) {
             try {
               const data = JSON.parse(line.slice(5));
               if (data.message && data.message.content && data.message.content.parts) {
-                assistantMessage = data.message.content.parts.join(' ');
+                assistantMessage = data.message.content.parts[0];
               }
               if (!conversationId && data.conversation_id) {
                 conversationId = data.conversation_id;
@@ -78,28 +101,20 @@ module.exports = {
         }
       }
 
-      if (buffer.startsWith('data: ')) {
-        try {
-          const data = JSON.parse(buffer.slice(5));
-          if (data.message && data.message.content && data.message.content.parts) {
-            assistantMessage = data.message.content.parts.join(' ');
-          }
-        } catch (error) {
-          logger.error('Error parsing JSON from remaining buffer:', error.message);
-        }
-      }
+      logger.info(`Assistant message: ${assistantMessage}`);
 
       await this.logConversation(userId, message, assistantMessage);
 
       return assistantMessage.trim();
     } catch (error) {
       logger.error('Error sending message to GoAPI:', error.message);
+      logger.error('Error stack:', error.stack);
       if (error.response) {
-        logger.error('Response data:', util.inspect(error.response.data, { depth: null }));
+        logger.error('Response data:', JSON.stringify(error.response.data));
         logger.error('Response status:', error.response.status);
-        logger.error('Response headers:', util.inspect(error.response.headers, { depth: null }));
+        logger.error('Response headers:', JSON.stringify(error.response.headers));
       } else if (error.request) {
-        logger.error('No response received:', util.inspect(error.request, { depth: null }));
+        logger.error('No response received:', error.request);
       } else {
         logger.error('Error details:', error.message);
       }
@@ -186,6 +201,17 @@ Timestamp: ${new Date().toISOString()}
       }
     } catch (error) {
       logger.error('Error sending file to GoAPI:', error);
+      throw error;
+    }
+  },
+
+  async processVoiceMessage(userId, filePath) {
+    try {
+      const transcribedText = await groqService.transcribeAudio(filePath);
+      logger.info(`Voice message transcribed successfully for user ${userId}`);
+      return this.sendMessage(userId, transcribedText);
+    } catch (error) {
+      logger.error(`Error processing voice message for user ${userId}:`, error);
       throw error;
     }
   },

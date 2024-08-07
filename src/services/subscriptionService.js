@@ -93,16 +93,28 @@ module.exports = {
   async addSubscription(username, months) {
     logger.info(`Adding subscription for user: ${username}, months: ${months}`);
     try {
-      const records = await Users.select({
+      let records = await Users.select({
         filterByFormula: `{Username} = '${username}'`
       }).firstPage();
 
+      let user;
       if (records.length === 0) {
-        logger.warn(`User not found: ${username}`);
-        throw new Error('Пользователь не найден');
+        logger.info(`User not found. Creating new user: ${username}`);
+        const newUser = await Users.create([
+          {
+            fields: {
+              Username: username,
+              SubscriptionEnd: null,
+              MessageCount: 0,
+              NewDialogCount: 0
+            }
+          }
+        ]);
+        user = newUser[0];
+      } else {
+        user = records[0];
       }
 
-      const user = records[0];
       const currentEnd = user.get('SubscriptionEnd');
       const newEnd = currentEnd && moment(currentEnd).isAfter(moment())
         ? moment(currentEnd).add(months, 'months')
