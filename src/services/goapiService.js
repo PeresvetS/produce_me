@@ -7,7 +7,9 @@ const fs = require('fs').promises;
 const path = require('path');
 const logger = require('../utils/logger');
 const util = require('util');
+const documentReader = require('./documentReader');
 const subscriptionService = require('./subscriptionService');
+
 
 module.exports = {
   async sendMessage(userId, message) {
@@ -17,6 +19,18 @@ module.exports = {
       const url = conversationId 
         ? `${config.goapiUrl}/conversation/${conversationId}`
         : `${config.goapiUrl}/conversation`;
+
+        let content = message;
+        if (message.startsWith('https') && (message.includes('docs.google.com') || message.includes('docs.yandex.ru'))) {
+          try {
+            
+            content = await documentReader.readDocument(message);
+            logger.info(`Document content read successfully for user ${userId}`);
+          } catch (error) {
+            logger.error('Error reading document:', error);
+            return 'Не удалось прочитать документ. Пожалуйста, убедитесь, что ссылка корректна и документ доступен для чтения.';
+          }
+        }
 
       logger.info(`Using URL: ${url}`);
       logger.info(`Using API Key: ${config.goapiKey.substring(0, 5)}...`);
