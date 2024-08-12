@@ -1,4 +1,4 @@
-// subscriptionService.js
+// src/services/subscriptionService.js
 
 const airtable = require('../db/airtable');
 const config = require('../config/config');

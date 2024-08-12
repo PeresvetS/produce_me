@@ -1,4 +1,4 @@
-// adminService.js
+// src/services/adminService.js
 
 const airtable = require('../db/airtable');
 const config = require('../config/config');

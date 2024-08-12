@@ -1,4 +1,4 @@
-// adminBot.js
+// src/app/adminBot.js
 
 const { Telegraf } = require('telegraf');
 const config = require('../config/config');

@@ -1,4 +1,4 @@
-// goapiService.js
+// src/services/goapiService.js
 
 const axios = require('axios');
 const config = require('../config/config');
@@ -120,6 +120,103 @@ module.exports = {
       }
       throw error;
     }
+  },
+
+    async createMindMapJSON(userId, topic) {
+    logger.info(`Creating mindmap JSON for user ${userId} on topic: ${topic}`);
+    try {
+      const url = `${config.goapiUrl}/conversation`;
+      
+      const prompt = `Создай структуру для mindmap на тему "${topic}". Используй следующий формат:
+      - Корневой узел: ${topic}
+        - Подтема 1 (цвет: skyblue, направление: right)
+          - Подподтема 1.1
+          - Подподтема 1.2
+        - Подтема 2 (цвет: darkseagreen, направление: left)
+          - Подподтема 2.1
+          - Подподтема 2.2
+      
+      Создай не менее 5 подтем и 2-3 подподтемы для каждой. Используй различные цвета (skyblue, darkseagreen, coral, palevioletred) и направления (right или left).`;
+
+      const requestData = {
+        model: 'gpt-4o',
+        content: {
+          content_type: "text",
+          parts: [prompt]
+        }
+      };
+
+      const response = await axios.post(url, requestData, {
+        headers: {
+          'X-API-Key': config.goapiKey,
+          'Content-Type': 'application/json'
+        },
+        responseType: 'stream'
+      });
+
+      let mindmapContent = '';
+      let buffer = '';
+
+      for await (const chunk of response.data) {
+        buffer += chunk.toString();
+        let lines = buffer.split('\n');
+        buffer = lines.pop();
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(5));
+              if (data.message && data.message.content && data.message.content.parts) {
+                mindmapContent += data.message.content.parts[0];
+              }
+            } catch (error) {
+              logger.error('Error parsing JSON:', error.message);
+            }
+          }
+        }
+      }
+
+      // Преобразуем текстовую структуру в JSON
+      const jsonStructure = this.convertTextToJSON(mindmapContent, topic);
+      return jsonStructure;
+    } catch (error) {
+      logger.error('Error creating mindmap JSON:', error.message);
+      throw error;
+    }
+  },
+
+  convertTextToJSON(text, rootTopic) {
+    const lines = text.split('\n').map(line => line.trim()).filter(line => line);
+    const nodeDataArray = [{ key: 0, text: rootTopic, loc: "0 0" }];
+    let currentKey = 1;
+    let stack = [{ key: 0, level: 0 }];
+
+    for (const line of lines) {
+      const level = (line.match(/^-+/) || [''])[0].length - 1;
+      const content = line.replace(/^-+\s*/, '');
+      
+      while (stack.length > 1 && stack[stack.length - 1].level >= level) {
+        stack.pop();
+      }
+
+      const parentKey = stack[stack.length - 1].key;
+      const [text, meta] = content.split('(');
+      const color = (meta && meta.match(/цвет:\s*(\w+)/)) ? meta.match(/цвет:\s*(\w+)/)[1] : 'lightgray';
+      const direction = (meta && meta.match(/направление:\s*(\w+)/)) ? meta.match(/направление:\s*(\w+)/)[1] : 'right';
+
+      nodeDataArray.push({
+        key: currentKey,
+        parent: parentKey,
+        text: text.trim(),
+        brush: color,
+        dir: direction
+      });
+
+      stack.push({ key: currentKey, level });
+      currentKey++;
+    }
+
+    return { class: "go.TreeModel", nodeDataArray };
   },
 
   async resetConversation(userId) {
