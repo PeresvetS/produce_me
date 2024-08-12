@@ -1,6 +1,5 @@
 // src/db/postgresConfig.js
 
-// src/db/postgresConfig.js
 
 const { Pool } = require('pg');
 const logger = require('../utils/logger');
