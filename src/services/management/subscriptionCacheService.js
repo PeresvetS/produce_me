@@ -2,7 +2,7 @@
 
 const fs = require('fs').promises;
 const path = require('path');
-const logger = require('../utils/logger');
+const logger = require('../../utils/logger');
 
 const CACHE_FILE = path.join(__dirname, '../../data/subscription_cache.json');
 const MESSAGE_LOG_FILE = path.join(__dirname, '../../data/message_log.json');

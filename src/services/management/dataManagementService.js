@@ -1,7 +1,7 @@
 // src/services/dataManagementService.js
 
-const db = require('../db/postgresConfig');
-const logger = require('../utils/logger');
+const db = require('../../db/postgresConfig');
+const logger = require('../../utils/logger');
 
 class DataManagementService {
   async createUser(userId, username) {

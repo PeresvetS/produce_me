@@ -1,7 +1,7 @@
 // src/services/userDataService.js
 
-const db = require('../db/postgresConfig');
-const logger = require('../utils/logger');
+const db = require('../../db/postgresConfig');
+const logger = require('../../utils/logger');
 
 class UserDataService {
   async createUser(userId, username) {

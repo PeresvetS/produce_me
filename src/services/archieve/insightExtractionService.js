@@ -1,8 +1,8 @@
 // src/services/insightExtractionService.js
 
 const { GroqClient } = require('groq-sdk');
-const config = require('../config/config');
-const logger = require('../utils/logger');
+const config = require('../../config/config');
+const logger = require('../../utils/logger');
 const { extractInsightsLLaMA, extractInsightsGemini } = require('./insightExtractionHelpers');
 const simpleNlpService = require('./simpleNlpService');
 

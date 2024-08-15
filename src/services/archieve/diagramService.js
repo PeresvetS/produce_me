@@ -4,7 +4,7 @@ const { exec } = require('child_process');
 const fs = require('fs').promises;
 const path = require('path');
 const util = require('util');
-const logger = require('../utils/logger');
+const logger = require('../../utils/logger');
 
 const execPromise = util.promisify(exec);
 

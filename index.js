@@ -13,7 +13,7 @@ const { Pool } = require('pg');
 const userBot = require('./src/app/userBot');
 const adminBot = require('./src/app/adminBot');
 const logger = require('./src/utils/logger');
-const vectorSearchService = require('./src/services/vectorSearchService');
+// const vectorSearchService = require('./src/services/vectorSearchService');
 const longTermMemoryService = require('./src/services/longTermMemoryService');
 const config = require('./src/config/config');
 
@@ -56,7 +56,7 @@ async function initDatabase() {
 async function initialize() {
   try {
     await initDatabase();
-    await vectorSearchService.initialize();
+    // await vectorSearchService.initialize();
     await longTermMemoryService.initialize();
 
     userBot.launch().then(() => {

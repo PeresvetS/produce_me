@@ -1,9 +1,9 @@
 // src/services/subscriptionService.js
 
-const airtable = require('../db/airtable');
-const config = require('../config/config');
+const airtable = require('../../db/airtable');
+const config = require('../../config/config');
 const moment = require('moment');
-const logger = require('../utils/logger');
+const logger = require('../../utils/logger');
 const subscriptionCacheService = require('./subscriptionCacheService');
 
 const Users = airtable(config.airtableUsersTableId);

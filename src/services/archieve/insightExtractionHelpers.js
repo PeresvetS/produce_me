@@ -1,6 +1,6 @@
 // src/services/insightExtractionHelpers.js
 
-const logger = require('../utils/logger');
+const logger = require('../../utils/logger');
 
 async function extractInsightsLLaMA(groqClient, conversation, keywordInfo) {
   try {

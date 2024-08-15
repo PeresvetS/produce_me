@@ -1,6 +1,6 @@
 // src/services/longTermMemoryHelpers.js
 
-const logger = require('../utils/logger');
+const logger = require('../../utils/logger');
 
 /**
  * Stores a memory for a specific user

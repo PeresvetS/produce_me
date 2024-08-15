@@ -1,7 +1,7 @@
 // src/services/simpleNlpService.js
 
 const natural = require('natural');
-const logger = require('../utils/logger');
+const logger = require('../../utils/logger');
 
 class SimpleNlpService {
   constructor() {

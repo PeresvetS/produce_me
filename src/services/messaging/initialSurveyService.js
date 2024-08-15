@@ -4,7 +4,7 @@ const { LLMChain } = require("langchain/chains");
 const { OpenAI } = require("langchain/llms/openai");
 const { PromptTemplate } = require("langchain/prompts");
 const logger = require('../utils/logger');
-const dataManagementService = require('./dataManagementService');
+const dataManagementService = require('./management/dataManagementService');
 
 class InitialSurveyService {
   constructor() {

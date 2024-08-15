@@ -1,8 +1,8 @@
 // src/services/modelSelectionService.js
 
 const { Configuration, OpenAIApi } = require('openai');
-const config = require('../config/config');
-const logger = require('../utils/logger');
+const config = require('../../config/config');
+const logger = require('../../utils/logger');
 
 class ModelSelectionService {
   constructor() {
@@ -22,7 +22,7 @@ class ModelSelectionService {
   async useGPT4(message) {
     try {
       const response = await this.openai.createChatCompletion({
-        model: 'gpt-4',
+        model: 'gpt-4o',
         messages: [{ role: 'user', content: message }],
         temperature: 0.7,
         max_tokens: 1000

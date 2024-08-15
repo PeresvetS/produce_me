@@ -2,7 +2,7 @@
 
 const Groq = require('groq-sdk');
 const fs = require('fs');
-const logger = require('../utils/logger');
+const logger = require('../../utils/logger');
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 

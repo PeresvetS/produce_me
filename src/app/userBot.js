@@ -5,18 +5,16 @@ const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
 const config = require('../config/config');
-const subscriptionService = require('../services/subscriptionService');
-const dialogService = require('../services/dialogService');
-const goapiService = require('../services/goapiService');
-const subscriptionCacheService = require('../services/subscriptionCacheService');
-const contextManagementService = require('../services/contextManagementService');
-const longTermMemoryService = require('../services/longTermMemoryService');
-const modelSelectionService = require('../services/modelSelectionService');
-const diagramService = require('../services/diagramService');
-const insightExtractionService = require('../services/insightExtractionService');
-const dataManagementService = require('../services/dataManagementService');
-const initialSurveyService = require('../services/initialSurveyService');
-const simpleNlpService = require('../services/simpleNlpService');
+const subscriptionService = require('../services/management/subscriptionService');
+const dialogService = require('../services/messaging/dialogService');
+const subscriptionCacheService = require('../services/management/subscriptionCacheService');
+const contextManagementService = require('../services/memory/contextManagementService');
+const longTermMemoryService = require('../services/memory/longTermMemoryService');
+const modelSelectionService = require('../services/messaging/modelSelectionService');
+// const insightExtractionService = require('../services/insightExtractionService');
+const dataManagementService = require('../services/management/dataManagementService');
+const initialSurveyService = require('../services/messaging/initialSurveyService');
+const simpleNlpService = require('../services/messaging/simpleNlpService');
 const logger = require('../utils/logger');
 
 const bot = new Telegraf(config.telegramToken);
@@ -62,60 +60,60 @@ bot.command('start_survey', async (ctx) => {
 
 
 
-bot.command('mindmap', async (ctx) => {
-  const userId = ctx.from.id;
-  const topic = ctx.message.text.split('/mindmap ')[1];
+// bot.command('mindmap', async (ctx) => {
+//   const userId = ctx.from.id;
+//   const topic = ctx.message.text.split('/mindmap ')[1];
 
-  logger.info(`Received /mindmap command from user ${userId} with topic: ${topic}`);
+//   logger.info(`Received /mindmap command from user ${userId} with topic: ${topic}`);
 
-  if (!topic) {
-    ctx.reply('Пожалуйста, укажите тему для mindmap. Например: /mindmap Искусственный интеллект');
-    return;
-  }
+//   if (!topic) {
+//     ctx.reply('Пожалуйста, укажите тему для mindmap. Например: /mindmap Искусственный интеллект');
+//     return;
+//   }
 
-  try {
-    const subscriptionStatus = await subscriptionService.checkSubscription(userId);
-    if (!subscriptionStatus) {
-      ctx.reply('У тебя нет активной подписки. Пожалуйста, обнови твою подписку через @neuro_zen_helps');
-      return;
-    }
+//   try {
+//     const subscriptionStatus = await subscriptionService.checkSubscription(userId);
+//     if (!subscriptionStatus) {
+//       ctx.reply('У тебя нет активной подписки. Пожалуйста, обнови твою подписку через @neuro_zen_helps');
+//       return;
+//     }
 
-    ctx.reply('Пожалуйста, немного подожди. Mindmap создаётся');
+//     ctx.reply('Пожалуйста, немного подожди. Mindmap создаётся');
 
-    ctx.sendChatAction('upload_document');
+//     ctx.sendChatAction('upload_document');
 
-    logger.info(`Creating mindmap JSON for user ${userId} on topic: ${topic}`);
-    let mindmapJSON;
-    try {
-      mindmapJSON = await goapiService.createMindMapJSON(userId, topic);
-      logger.info(`Mindmap JSON created successfully: ${JSON.stringify(mindmapJSON)}`);
-    } catch (error) {
-      logger.error(`Error creating mindmap JSON for user ${userId}:`, error);
-      throw new Error('Не удалось создать структуру mindmap');
-    }
+//     logger.info(`Creating mindmap JSON for user ${userId} on topic: ${topic}`);
+//     let mindmapJSON;
+//     try {
+//       // mindmapJSON = await goapiService.createMindMapJSON(userId, topic);
+//       logger.info(`Mindmap JSON created successfully: ${JSON.stringify(mindmapJSON)}`);
+//     } catch (error) {
+//       logger.error(`Error creating mindmap JSON for user ${userId}:`, error);
+//       throw new Error('Не удалось создать структуру mindmap');
+//     }
     
-    logger.info(`Creating mindmap image for user ${userId}`);
-    let mindmapSVG;
-    try {
-      mindmapSVG = await diagramService.createMindMapImage(mindmapJSON);
-      logger.info(`Mindmap SVG created successfully for user ${userId}`);
-    } catch (error) {
-      logger.error(`Error creating mindmap SVG for user ${userId}:`, error);
-      throw new Error('Не удалось создать изображение mindmap');
-    }
+//     logger.info(`Creating mindmap image for user ${userId}`);
+//     let mindmapSVG;
+//     try {
+//       mindmapSVG = await diagramService.createMindMapImage(mindmapJSON);
+//       logger.info(`Mindmap SVG created successfully for user ${userId}`);
+//     } catch (error) {
+//       logger.error(`Error creating mindmap SVG for user ${userId}:`, error);
+//       throw new Error('Не удалось создать изображение mindmap');
+//     }
 
-    logger.info(`Sending mindmap SVG to user ${userId}`);
-    await ctx.replyWithDocument({ source: Buffer.from(mindmapSVG), filename: 'mindmap.svg' });
+//     logger.info(`Sending mindmap SVG to user ${userId}`);
+//     await ctx.replyWithDocument({ source: Buffer.from(mindmapSVG), filename: 'mindmap.svg' });
 
-    await subscriptionCacheService.logMessage(userId);
-    await dialogService.incrementDialogCount(userId);
+//     await subscriptionCacheService.logMessage(userId);
+//     await dialogService.incrementDialogCount(userId);
 
-    logger.info(`Mindmap successfully sent to user ${userId}`);
-  } catch (error) {
-    logger.error(`Error in /mindmap command for user ${userId}:`, error);
-    ctx.reply(`Произошла ошибка при создании mindmap: ${error.message}. Пожалуйста, попробуйте еще раз или обратитесь в службу поддержки.`);
-  }
-});
+//     logger.info(`Mindmap successfully sent to user ${userId}`);
+//   } catch (error) {
+//     logger.error(`Error in /mindmap command for user ${userId}:`, error);
+//     ctx.reply(`Произошла ошибка при создании mindmap: ${error.message}. Пожалуйста, попробуйте еще раз или обратитесь в службу поддержки.`);
+//   }
+// });
 
 bot.on('text', async (ctx) => {
   const userId = ctx.from.id;
@@ -170,7 +168,7 @@ bot.on('text', async (ctx) => {
     const messageCount = await subscriptionCacheService.getMessageCount(userId);
     if (containsKeywords || messageCount % 15 === 0) {
       const conversation = await contextManagementService.getConversationHistory(userId);
-      const insights = await insightExtractionService.extractInsights(userId, conversation);
+      // const insights = await insightExtractionService.extractInsights(userId, conversation);
       await longTermMemoryService.addMemory(userId, `Insights: ${insights}`);
       // Сохраняем инсайты в структурированных данных пользователя
       await dataManagementService.updateUserData(userId, { insights });
@@ -198,49 +196,49 @@ bot.on('text', async (ctx) => {
 }
 });
 
-bot.on('voice', async (ctx) => {
-  const userId = ctx.from.id;
+// bot.on('voice', async (ctx) => {
+//   const userId = ctx.from.id;
 
-  try {
-    const subscriptionStatus = await subscriptionService.checkSubscription(userId);
-    if (!subscriptionStatus) {
-      ctx.reply('У тебя нет активной подписки. Пожалуйста, обнови твою подписку через @neuro_zen_helps');
-      return;
-    }
+//   try {
+//     const subscriptionStatus = await subscriptionService.checkSubscription(userId);
+//     if (!subscriptionStatus) {
+//       ctx.reply('У тебя нет активной подписки. Пожалуйста, обнови твою подписку через @neuro_zen_helps');
+//       return;
+//     }
 
-    ctx.sendChatAction('typing');
+//     ctx.sendChatAction('typing');
 
-    const fileId = ctx.message.voice.file_id;
-    const fileLink = await ctx.telegram.getFileLink(fileId);
-    const response = await axios({
-      method: 'get',
-      url: fileLink.href,
-      responseType: 'stream'
-    });
+//     const fileId = ctx.message.voice.file_id;
+//     const fileLink = await ctx.telegram.getFileLink(fileId);
+//     const response = await axios({
+//       method: 'get',
+//       url: fileLink.href,
+//       responseType: 'stream'
+//     });
 
-    const tempFilePath = path.join(__dirname, '../../temp', `voice_${userId}_${Date.now()}.ogg`);
-    const writer = fs.createWriteStream(tempFilePath);
-    response.data.pipe(writer);
+//     const tempFilePath = path.join(__dirname, '../../temp', `voice_${userId}_${Date.now()}.ogg`);
+//     const writer = fs.createWriteStream(tempFilePath);
+//     response.data.pipe(writer);
 
-    await new Promise((resolve, reject) => {
-      writer.on('finish', resolve);
-      writer.on('error', reject);
-    });
+//     await new Promise((resolve, reject) => {
+//       writer.on('finish', resolve);
+//       writer.on('error', reject);
+//     });
 
-    const aiResponse = await goapiService.processVoiceMessage(userId, tempFilePath);
+//     const aiResponse = await goapiService.processVoiceMessage(userId, tempFilePath);
 
-    fs.unlink(tempFilePath, (err) => {
-      if (err) logger.error('Error deleting temp file:', err);
-    });
+//     fs.unlink(tempFilePath, (err) => {
+//       if (err) logger.error('Error deleting temp file:', err);
+//     });
 
-    await subscriptionCacheService.logMessage(userId);
-    await dialogService.incrementDialogCount(userId);
+//     await subscriptionCacheService.logMessage(userId);
+//     await dialogService.incrementDialogCount(userId);
 
-    ctx.reply(aiResponse);
-  } catch (error) {
-    logger.error('Error processing voice message:', error);
-    ctx.reply('Произошла ошибка при обработке голосового сообщения. Пожалуйста, попробуйте еще раз.');
-  }
-});
+//     ctx.reply(aiResponse);
+//   } catch (error) {
+//     logger.error('Error processing voice message:', error);
+//     ctx.reply('Произошла ошибка при обработке голосового сообщения. Пожалуйста, попробуйте еще раз.');
+//   }
+// });
 
 module.exports = bot;

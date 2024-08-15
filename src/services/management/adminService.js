@@ -1,8 +1,8 @@
 // src/services/adminService.js
 
-const airtable = require('../db/airtable');
-const config = require('../config/config');
-const logger = require('../utils/logger');
+const airtable = require('../../db/airtable');
+const config = require('../../config/config');
+const logger = require('../../utils/logger');
 
 const Admins = airtable(config.airtableAdminsTableId);
 

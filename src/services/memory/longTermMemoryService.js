@@ -2,8 +2,8 @@
 
 const Mem0 = require('mem0ai');
 const { OpenAIEmbeddings } = require('langchain/embeddings/openai');
-const config = require('../config/config');
-const logger = require('../utils/logger');
+const config = require('../../config/config');
+const logger = require('../../utils/logger');
 
 class LongTermMemoryService {
   constructor() {

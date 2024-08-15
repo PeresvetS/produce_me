@@ -2,8 +2,8 @@
 
 const { PineconeClient } = require('@pinecone-database/pinecone');
 const { OpenAIEmbeddings } = require('langchain/embeddings/openai');
-const logger = require('../utils/logger');
-const config = require('../config/config');
+const logger = require('../../utils/logger');
+const config = require('../../config/config');
 
 class VectorSearchService {
   constructor() {

@@ -1,8 +1,8 @@
 // src/services/dialogService.js
 
-const airtable = require('../db/airtable');
-const config = require('../config/config');
-const logger = require('../utils/logger');
+const airtable = require('../../db/airtable');
+const config = require('../../config/config');
+const logger = require('../../utils/logger');
 
 const Users = airtable(config.airtableUsersTableId);
 

@@ -2,8 +2,8 @@
 
 const { ConversationChain } = require('langchain/chains');
 const { BufferMemory } = require('langchain/memory');
-const logger = require('../utils/logger');
-const modelSelectionService = require('./modelSelectionService');
+const logger = require('../../utils/logger');
+const modelSelectionService = require('../messaging/modelSelectionService');
 
 class ContextManagementService {
   constructor() {
