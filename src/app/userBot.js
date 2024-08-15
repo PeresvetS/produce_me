@@ -194,6 +194,8 @@ bot.on('text', async (ctx) => {
     logger.error('Error stack:', error.stack);
     ctx.reply('Произошла ошибка при обработке твоего сообщения. Пожалуйста, попробуй ещё раз или обратись в службу поддержки.');
   }
+} catch (error) {
+}
 });
 
 bot.on('voice', async (ctx) => {
