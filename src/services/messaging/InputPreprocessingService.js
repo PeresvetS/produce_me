@@ -1,6 +1,5 @@
-// src/services/inputPreprocessingService.js
+// src/services/messaging/InputPreprocessingService.js
 
-const { removeStopwords } = require('stopword');
 const { LLMChain } = require("langchain/chains");
 const { OpenAI } = require("langchain/llms/openai");
 const { PromptTemplate } = require("langchain/prompts");
@@ -32,17 +31,10 @@ class InputPreprocessingService {
   async cleanInput(text) {
     logger.info('Cleaning input text');
     try {
-      // Удаление лишних пробелов
-      let cleanedText = text.trim().replace(/\s+/g, ' ');
-
-      // Удаление HTML-тегов
-      cleanedText = cleanedText.replace(/<[^>]*>/g, '');
-
-      // Удаление URL
-      cleanedText = cleanedText.replace(/https?:\/\/\S+/g, '');
-
-      // Удаление эмодзи
-      cleanedText = cleanedText.replace(/[\u{1F600}-\u{1F64F}]/gu, '');
+      let cleanedText = text.trim().replace(/\s+/g, ' ')
+                            .replace(/<[^>]*>/g, '')
+                            .replace(/https?:\/\/\S+/g, '')
+                            .replace(/[\u{1F600}-\u{1F64F}]/gu, '');
 
       logger.info('Input cleaning completed');
       return cleanedText;

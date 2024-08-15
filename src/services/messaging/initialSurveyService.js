@@ -1,10 +1,10 @@
-// src/services/initialSurveyService.js
+// src/services/messaging/initialSurveyService.js
 
 const { LLMChain } = require("langchain/chains");
 const { OpenAI } = require("langchain/llms/openai");
 const { PromptTemplate } = require("langchain/prompts");
 const logger = require('../../utils/logger');
-const dataManagementService = require('../management/dataManagementService');
+const prisma = require('../../db/prisma');
 
 class InitialSurveyService {
   constructor() {
@@ -20,7 +20,22 @@ class InitialSurveyService {
   async startSurvey(userId) {
     logger.info(`Starting initial survey for user ${userId}`);
     try {
-      await dataManagementService.updateUserData(userId, { surveyStarted: true, surveyCompleted: false });
+      await prisma.userData.upsert({
+        where: {
+          userId_key: {
+            userId: BigInt(userId),
+            key: 'surveyStatus'
+          }
+        },
+        update: {
+          value: { started: true, completed: false }
+        },
+        create: {
+          userId: BigInt(userId),
+          key: 'surveyStatus',
+          value: { started: true, completed: false }
+        }
+      });
       const firstQuestion = await this.getNextQuestion(userId, []);
       return firstQuestion;
     } catch (error) {
@@ -32,10 +47,34 @@ class InitialSurveyService {
   async processAnswer(userId, answer) {
     logger.info(`Processing survey answer for user ${userId}`);
     try {
-      const userData = await dataManagementService.getUserData(userId);
-      const previousAnswers = userData.surveyAnswers || [];
+      const userData = await prisma.userData.findUnique({
+        where: {
+          userId_key: {
+            userId: BigInt(userId),
+            key: 'surveyAnswers'
+          }
+        }
+      });
+
+      const previousAnswers = userData?.value || [];
       previousAnswers.push(answer);
-      await dataManagementService.updateUserData(userId, { surveyAnswers: previousAnswers });
+
+      await prisma.userData.upsert({
+        where: {
+          userId_key: {
+            userId: BigInt(userId),
+            key: 'surveyAnswers'
+          }
+        },
+        update: {
+          value: previousAnswers
+        },
+        create: {
+          userId: BigInt(userId),
+          key: 'surveyAnswers',
+          value: previousAnswers
+        }
+      });
 
       if (previousAnswers.length >= 5) {
         await this.completeSurvey(userId);
@@ -64,8 +103,22 @@ class InitialSurveyService {
   async completeSurvey(userId) {
     logger.info(`Completing survey for user ${userId}`);
     try {
-      await dataManagementService.updateUserData(userId, { surveyCompleted: true });
-      // Здесь можно добавить дополнительную логику по обработке результатов опроса
+      await prisma.userData.upsert({
+        where: {
+          userId_key: {
+            userId: BigInt(userId),
+            key: 'surveyStatus'
+          }
+        },
+        update: {
+          value: { started: true, completed: true }
+        },
+        create: {
+          userId: BigInt(userId),
+          key: 'surveyStatus',
+          value: { started: true, completed: true }
+        }
+      });
     } catch (error) {
       logger.error(`Error completing survey for user ${userId}:`, error);
       throw error;

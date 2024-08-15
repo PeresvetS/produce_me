@@ -1,24 +1,34 @@
-// src/services/dataManagementService.js
+// src/services/management/dataManagementService.js
 
-const db = require('../../db/postgresConfig');
+const prisma = require('../../db/prisma');
 const logger = require('../../utils/logger');
 
 class DataManagementService {
   async createUser(userId, username) {
-    const query = 'INSERT INTO users(user_id, username) VALUES($1, $2) ON CONFLICT (user_id) DO NOTHING';
     try {
-      await db.query(query, [userId, username]);
-      logger.info(`User created or already exists: ${userId}`);
+      await prisma.user.create({
+        data: {
+          userId: userId,
+          username: username,
+        }
+      });
+      logger.info(`User created: ${userId}`);
     } catch (error) {
-      logger.error('Error creating user:', error);
-      throw error;
+      if (error.code === 'P2002') {
+        logger.info(`User already exists: ${userId}`);
+      } else {
+        logger.error('Error creating user:', error);
+        throw error;
+      }
     }
   }
 
   async updateUserData(userId, data) {
-    const query = 'UPDATE users SET data = data || $1 WHERE user_id = $2';
     try {
-      await db.query(query, [data, userId]);
+      await prisma.user.update({
+        where: { userId: userId },
+        data: { data: { ...data } }
+      });
       logger.info(`User data updated: ${userId}`);
     } catch (error) {
       logger.error('Error updating user data:', error);
@@ -27,10 +37,12 @@ class DataManagementService {
   }
 
   async getUserData(userId) {
-    const query = 'SELECT data FROM users WHERE user_id = $1';
     try {
-      const result = await db.query(query, [userId]);
-      return result.rows[0]?.data || {};
+      const user = await prisma.user.findUnique({
+        where: { userId: userId },
+        select: { data: true }
+      });
+      return user?.data || {};
     } catch (error) {
       logger.error('Error getting user data:', error);
       throw error;
@@ -38,9 +50,10 @@ class DataManagementService {
   }
 
   async deleteUser(userId) {
-    const query = 'DELETE FROM users WHERE user_id = $1';
     try {
-      await db.query(query, [userId]);
+      await prisma.user.delete({
+        where: { userId: userId }
+      });
       logger.info(`User deleted: ${userId}`);
     } catch (error) {
       logger.error('Error deleting user:', error);
@@ -49,10 +62,13 @@ class DataManagementService {
   }
 
   async listUsers(limit = 10, offset = 0) {
-    const query = 'SELECT user_id, username, data FROM users ORDER BY created_at DESC LIMIT $1 OFFSET $2';
     try {
-      const result = await db.query(query, [limit, offset]);
-      return result.rows;
+      const users = await prisma.user.findMany({
+        take: limit,
+        skip: offset,
+        orderBy: { createdAt: 'desc' }
+      });
+      return users;
     } catch (error) {
       logger.error('Error listing users:', error);
       throw error;

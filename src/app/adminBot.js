@@ -2,9 +2,9 @@
 
 const { Telegraf } = require('telegraf');
 const config = require('../config/config');
-const subscriptionService = require('../services/management/subscriptionService');
-const subscriptionCacheService = require('../services/management/subscriptionCacheService');
-const adminService = require('../services/management/adminService');
+const subscriptionService = require('../services/subscriptionService');
+const subscriptionCacheService = require('../services/subscriptionCacheService');
+const adminService = require('../services/adminService');
 const logger = require('../utils/logger');
 
 const adminBot = new Telegraf(config.adminBotToken);
@@ -38,14 +38,13 @@ adminBot.command('stats', async (ctx) => {
   }
 });
 
-
 adminBot.command('users', async (ctx) => {
   try {
     const users = await subscriptionService.getAllUsers();
     let message = 'Список пользователей:\n\n';
     users.forEach(user => {
       const subscriptionStatus = user.subscriptionEnd ? `Подписка до ${user.subscriptionEnd}` : 'Нет активной подписки';
-      message += `ID: ${user.id}, Имя: ${user.name}, Username: @${user.username}, Диалогов: ${user.dialogCount}, ${subscriptionStatus}\n\n`;
+      message += `ID: ${user.userId}, Имя: ${user.name}, Username: @${user.username}, Диалогов: ${user.dialogCount}, ${subscriptionStatus}\n\n`;
     });
     ctx.reply(message);
   } catch (error) {
@@ -114,19 +113,17 @@ adminBot.command('getlog', async (ctx) => {
 
   const userId = args[1];
 
-  // try {
-  //   const log = await goapiService.getConversationLog(userId);
-  //   if (log.length > 4096) {
-  //     ctx.replyWithDocument({ source: Buffer.from(log), filename: `conversation_log_${userId}.txt` });
-  //   } else {
-  //     ctx.reply(log);
-  //   }
-  // } catch (error) {
-  //   logger.error('Error fetching conversation log:', error);
-  //   ctx.reply('Произошла ошибка при получении лога переписки.');
-  // }
+  try {
+    const log = await goapiService.getConversationLog(userId);
+    if (log.length > 4096) {
+      ctx.replyWithDocument({ source: Buffer.from(log), filename: `conversation_log_${userId}.txt` });
+    } else {
+      ctx.reply(log);
+    }
+  } catch (error) {
+    logger.error('Error fetching conversation log:', error);
+    ctx.reply('Произошла ошибка при получении лога переписки.');
+  }
 });
-
-
 
 module.exports = adminBot;

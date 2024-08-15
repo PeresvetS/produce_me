@@ -1,75 +1,46 @@
-// src/services/subscriptionCacheService.js
+// src/services/management/subscriptionCacheService.js
 
-const fs = require('fs').promises;
-const path = require('path');
+const Redis = require('ioredis');
 const logger = require('../../utils/logger');
 
-const CACHE_FILE = path.join(__dirname, '../../data/subscription_cache.json');
-const MESSAGE_LOG_FILE = path.join(__dirname, '../../data/message_log.json');
+const redis = new Redis(process.env.REDIS_URL);
 
-module.exports = {
+class SubscriptionCacheService {
   async getCachedSubscription(userId) {
     try {
-      const data = await fs.readFile(CACHE_FILE, 'utf8');
-      const cache = JSON.parse(data);
-      const userCache = cache[userId];
-      if (userCache && Date.now() - userCache.timestamp < 24 * 60 * 60 * 1000) {
-        return userCache.status;
-      }
+      const status = await redis.get(`subscription:${userId}`);
+      return status === 'true';
     } catch (error) {
-      if (error.code !== 'ENOENT') {
-        logger.error('Error reading cache file:', error);
-      }
+      logger.error('Error reading from cache:', error);
+      return null;
     }
-    return null;
-  },
+  }
 
   async setCachedSubscription(userId, status) {
     try {
-      let cache = {};
-      try {
-        const data = await fs.readFile(CACHE_FILE, 'utf8');
-        cache = JSON.parse(data);
-      } catch (error) {
-        if (error.code !== 'ENOENT') {
-          logger.error('Error reading cache file:', error);
-        }
-      }
-      cache[userId] = { status, timestamp: Date.now() };
-      await fs.writeFile(CACHE_FILE, JSON.stringify(cache));
+      await redis.set(`subscription:${userId}`, status.toString(), 'EX', 24 * 60 * 60);
     } catch (error) {
-      logger.error('Error writing cache file:', error);
+      logger.error('Error writing to cache:', error);
     }
-  },
+  }
 
   async logMessage(userId) {
     try {
-      let log = {};
-      try {
-        const data = await fs.readFile(MESSAGE_LOG_FILE, 'utf8');
-        log = JSON.parse(data);
-      } catch (error) {
-        if (error.code !== 'ENOENT') {
-          logger.error('Error reading message log file:', error);
-        }
-      }
-      log[userId] = (log[userId] || 0) + 1;
-      await fs.writeFile(MESSAGE_LOG_FILE, JSON.stringify(log));
+      await redis.incr(`messages:${userId}`);
     } catch (error) {
-      logger.error('Error writing message log file:', error);
+      logger.error('Error logging message:', error);
     }
-  },
+  }
 
   async getMessageCount(userId) {
     try {
-      const data = await fs.readFile(MESSAGE_LOG_FILE, 'utf8');
-      const log = JSON.parse(data);
-      return log[userId] || 0;
+      const count = await redis.get(`messages:${userId}`);
+      return parseInt(count) || 0;
     } catch (error) {
-      if (error.code !== 'ENOENT') {
-        logger.error('Error reading message log file:', error);
-      }
+      logger.error('Error getting message count:', error);
       return 0;
     }
   }
-};
+}
+
+module.exports = new SubscriptionCacheService();

@@ -1,4 +1,4 @@
-// src/services/simpleNlpService.js
+// src/services/memory/simpleNlpService.js
 
 const natural = require('natural');
 const logger = require('../../utils/logger');

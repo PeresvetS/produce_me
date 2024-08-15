@@ -1,10 +1,11 @@
-// src/services/insightExtractionService.js
+// src/services/memory/insightExtractionService.js
 
 const { GroqClient } = require('groq-sdk');
 const config = require('../../config/config');
 const logger = require('../../utils/logger');
 const { extractInsightsLLaMA, extractInsightsGemini } = require('./insightExtractionHelpers');
-const simpleNlpService = require('./simpleNlpService');
+const simpleNlpService = require('../messaging/simpleNlpService');
+const prisma = require('../db/prisma');
 
 class InsightExtractionService {
   constructor() {
@@ -13,16 +14,15 @@ class InsightExtractionService {
 
   async extractInsights(userId, conversation) {
     try {
-      // Анализируем последнее сообщение на наличие ключевых слов
       const lastMessage = conversation.split('\n').pop();
       const containsKeywords = simpleNlpService.analyzeText(lastMessage);
-
-      // Добавляем информацию о ключевых словах в промпт
       const keywordInfo = containsKeywords ? "Обрати особое внимание на последнее сообщение, так как оно содержит ключевые слова." : "";
 
-      // По умолчанию используем LLaMA 3.1-70B
       const insights = await this.extractInsightsLLaMA(conversation, keywordInfo);
-      logger.info(`Extracted insights for user ${userId}`);
+      
+      await this.saveInsights(userId, insights);
+      
+      logger.info(`Extracted and saved insights for user ${userId}`);
       return insights;
     } catch (error) {
       logger.error(`Error extracting insights for user ${userId}:`, error);
@@ -35,8 +35,50 @@ class InsightExtractionService {
   }
 
   async extractInsightsGemini(conversation, keywordInfo) {
-    // Примечание: эта функция пока не реализована, так как Gemini Flash 1.5 не доступен
     return extractInsightsGemini(conversation, keywordInfo);
+  }
+
+  async saveInsights(userId, insights) {
+    try {
+      await prisma.userData.upsert({
+        where: {
+          userId_key: {
+            userId: BigInt(userId),
+            key: 'insights'
+          }
+        },
+        update: {
+          value: insights
+        },
+        create: {
+          userId: BigInt(userId),
+          key: 'insights',
+          value: insights
+        }
+      });
+    } catch (error) {
+      logger.error(`Error saving insights for user ${userId}:`, error);
+      throw error;
+    }
+  }
+
+  async getInsights(userId) {
+    logger.info(`Retrieving insights for user ${userId}`);
+    try {
+      const userData = await prisma.userData.findUnique({
+        where: {
+          userId_key: {
+            userId: BigInt(userId),
+            key: 'insights'
+          }
+        }
+      });
+
+      return userData?.value || '';
+    } catch (error) {
+      logger.error(`Error retrieving insights for user ${userId}:`, error);
+      throw error;
+    }
   }
 }
 

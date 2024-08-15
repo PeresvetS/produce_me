@@ -1,78 +1,58 @@
-// src/services/longTermMemoryService.js
+// src/services/memory/longTermMemoryService.js
 
-const Mem0 = require('mem0ai');
+const { PineconeClient } = require('@pinecone-database/pinecone');
 const { OpenAIEmbeddings } = require('langchain/embeddings/openai');
 const config = require('../../config/config');
 const logger = require('../../utils/logger');
 
 class LongTermMemoryService {
   constructor() {
-    this.mem0 = new Mem0(config.mem0ApiKey);
-    this.embeddings = new OpenAIEmbeddings();
+    this.client = new PineconeClient();
+    this.embeddings = new OpenAIEmbeddings({
+      modelName: "text-embedding-3-small"
+    });
   }
 
   async initialize() {
-    await this.mem0.initialize();
-    logger.info('LongTermMemoryService initialized');
+    await this.client.init({
+      apiKey: config.pineconeApiKey,
+      environment: config.pineconeEnvironment,
+    });
+    this.index = this.client.Index(config.pineconeIndexName);
+    logger.info('Pinecone client initialized with text-embedding-3-small');
   }
 
   async addMemory(userId, content) {
     try {
-      const vector = await this.embeddings.embedQuery(content);
-      
-      // Проверяем наличие похожих воспоминаний
-      const similarMemories = await this.findSimilarMemories(userId, vector);
-      
-      if (similarMemories.length > 0) {
-        // Удаляем старые похожие воспоминания
-        for (const memory of similarMemories) {
-          await this.mem0.deleteMemory(memory.id);
-          logger.info(`Deleted old similar memory for user ${userId}: ${memory.id}`);
-        }
-      }
-
-      // Сохраняем новое воспоминание
-      await this.mem0.storeMemory({
-        userId,
-        content,
-        vector,
-        timestamp: new Date().toISOString(),
+      const embedding = await this.embeddings.embedQuery(content);
+      await this.index.upsert({
+        upsertRequest: {
+          vectors: [{
+            id: `user_${userId}_${Date.now()}`,
+            values: embedding,
+            metadata: { userId, text: content },
+          }],
+        },
       });
-      
       logger.info(`New memory added for user ${userId}`);
     } catch (error) {
-      logger.error(`Error processing memory for user ${userId}:`, error);
+      logger.error(`Error adding memory for user ${userId}:`, error);
       throw error;
     }
   }
 
-  async findSimilarMemories(userId, vector, similarityThreshold = 0.8) {
+  async getRelevantMemories(userId, query, k = 5) {
     try {
-      const memories = await this.mem0.searchMemories({
-        userId,
-        vector,
-        limit: 5,
+      const queryEmbedding = await this.embeddings.embedQuery(query);
+      const searchResponse = await this.index.query({
+        queryRequest: {
+          vector: queryEmbedding,
+          topK: k,
+          includeMetadata: true,
+          filter: { userId: userId },
+        },
       });
-
-      return memories.filter(memory => memory.similarity > similarityThreshold);
-    } catch (error) {
-      logger.error(`Error finding similar memories for user ${userId}:`, error);
-      throw error;
-    }
-  }
-
-  async getRelevantMemories(userId, query, limit = 5) {
-    try {
-      const queryVector = await this.embeddings.embedQuery(query);
-      const memories = await this.mem0.searchMemories({
-        userId,
-        vector: queryVector,
-        limit,
-      });
-      
-      const relevantMemories = memories.map(memory => memory.content);
-      logger.info(`Retrieved ${relevantMemories.length} relevant memories for user ${userId}`);
-      return relevantMemories;
+      return searchResponse.matches.map(match => match.metadata.text);
     } catch (error) {
       logger.error(`Error retrieving relevant memories for user ${userId}:`, error);
       throw error;

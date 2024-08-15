@@ -1,0 +1,67 @@
+// prisma/schema.prisma
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  userId    BigInt   @unique
+  username  String?
+  firstName String?
+  lastName  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userData       UserData[]
+  dialogs        Dialog[]
+  messages       Message[]
+  surveyResults  SurveyResult[]
+}
+
+model UserData {
+  id        Int      @id @default(autoincrement())
+  user      User     @relation(fields: [userId], references: [userId])
+  userId    BigInt
+  key       String
+  value     Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, key])
+}
+
+model Dialog {
+  id        Int       @id @default(autoincrement())
+  user      User      @relation(fields: [userId], references: [userId])
+  userId    BigInt
+  startedAt DateTime  @default(now())
+  endedAt   DateTime?
+  context   Json?
+  messages  Message[]
+}
+
+model Message {
+  id        Int      @id @default(autoincrement())
+  dialog    Dialog   @relation(fields: [dialogId], references: [id])
+  dialogId  Int
+  user      User     @relation(fields: [userId], references: [userId])
+  userId    BigInt
+  content   String
+  role      String
+  createdAt DateTime @default(now())
+}
+
+model SurveyResult {
+  id        Int      @id @default(autoincrement())
+  user      User     @relation(fields: [userId], references: [userId])
+  userId    BigInt
+  question  String
+  answer    String
+  createdAt DateTime @default(now())
+}

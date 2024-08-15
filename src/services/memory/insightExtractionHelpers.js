@@ -1,4 +1,4 @@
-// src/services/insightExtractionHelpers.js
+// src/services/memory/insightExtractionHelpers.js
 
 const logger = require('../../utils/logger');
 

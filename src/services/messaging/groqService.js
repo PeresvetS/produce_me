@@ -1,4 +1,4 @@
-// src/services/groqService.js
+// src/services/messaging/groqService.js
 
 const Groq = require('groq-sdk');
 const fs = require('fs');
