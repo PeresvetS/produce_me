@@ -1,13 +1,13 @@
 // src/services/messaging/InputPreprocessingService.js
 
 const { LLMChain } = require("langchain/chains");
-const { OpenAI } = require("langchain/llms/openai");
-const { PromptTemplate } = require("langchain/prompts");
+const { ChatOpenAI } = require("@langchain/openai");
+const { PromptTemplate } = require("@langchain/core/prompts");
 const logger = require('../../utils/logger');
 
 class InputPreprocessingService {
   constructor() {
-    this.llm = new OpenAI({ temperature: 0 });
+    this.llm = new ChatOpenAI({ temperature: 0 });
     this.preprocessChain = new LLMChain({
       llm: this.llm,
       prompt: PromptTemplate.fromTemplate(

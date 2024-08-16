@@ -3,8 +3,8 @@
 const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
-const logger = require('../utils/logger');
-const botLogicService = require('../management/botLogicService');
+const logger = require('../../utils/logger');
+const botLogicService = require('../management/userBotService');
 
 class VoiceMessageService {
   async processVoiceMessage(userId, fileLink) {

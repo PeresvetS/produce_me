@@ -1,20 +1,15 @@
 // src/main.js
 
 const { PrismaClient } = require('@prisma/client');
-const { runMigrations } = require('./db/migrations');
 const userBot = require('./app/userBot');
 const adminBot = require('./app/adminBot');
 const logger = require('./utils/logger');
-const longTermMemoryService = require('./services/longTermMemoryService');
+// const longTermMemoryService = require('./services/memory/longTermMemoryService');
 
 const prisma = new PrismaClient();
 
 async function initDatabase() {
   try {
-    logger.info('Running database migrations...');
-    await runMigrations();
-    logger.info('Database migrations completed successfully');
-    
     await prisma.$connect();
     logger.info('Database connection established successfully');
   } catch (error) {
@@ -25,7 +20,7 @@ async function initDatabase() {
 
 async function initServices() {
   try {
-    await longTermMemoryService.initialize();
+    // await longTermMemoryService.initialize();
     logger.info('Long-term memory service initialized');
   } catch (error) {
     logger.error('Error initializing services:', error);
@@ -35,6 +30,7 @@ async function initServices() {
 
 async function startBots() {
   try {
+    logger.info('User bot starting');
     await userBot.launch();
     logger.info('User bot started');
 

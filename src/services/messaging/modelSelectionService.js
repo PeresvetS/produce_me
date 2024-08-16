@@ -1,13 +1,13 @@
 // src/services/messaging/modelSelectionService.js
 
-const { OpenAI } = require("langchain/llms/openai");
+const { ChatOpenAI } = require("@langchain/openai");
 const config = require('../../config/');
 const logger = require('../../utils/logger');
 
 class ModelSelectionService {
   constructor() {
     this.models = {
-      'gpt-4o': new OpenAI({ modelName: "gpt-4", temperature: 0.7, maxTokens: 1000 }),
+      'gpt-4o': new ChatOpenAI({ modelName: "gpt-4o", temperature: 0.7, maxTokens: 1000 }),
       'claude-3.5-sonnet': null // Claude model not implemented yet
     };
   }

@@ -1,24 +1,24 @@
 // src/app/userBot.js
 
 const { Telegraf } = require('telegraf');
-const config = require('../config/config');
-const botLogicService = require('../services/botLogicService');
-const voiceMessageService = require('../services/voiceMessageService');
+const config = require('../config/');
+const botLogicService = require('../services/management/userBotService');
+const voiceMessageService = require('../services/messaging/voiceMessageService');
 const logger = require('../utils/logger');
 
-const bot = new Telegraf(config.telegramToken);
+const userBot = new Telegraf(config.telegram.userBotToken);
 
-bot.start(async (ctx) => {
+userBot.start(async (ctx) => {
   const message = await botLogicService.startNewDialog(ctx.from.id, ctx.from.username);
   ctx.reply(message);
 });
 
-bot.command('newProducer', async (ctx) => {
+userBot.command('newProducer', async (ctx) => {
   const message = await botLogicService.startNewDialog(ctx.from.id, ctx.from.username, true);
   ctx.reply(message);
 });
 
-bot.command('start_survey', async (ctx) => {
+userBot.command('start_survey', async (ctx) => {
   try {
     const firstQuestion = await botLogicService.startSurvey(ctx.from.id);
     ctx.reply(`Давайте начнем начальный опрос. ${firstQuestion}`);
@@ -28,7 +28,7 @@ bot.command('start_survey', async (ctx) => {
   }
 });
 
-bot.on('text', async (ctx) => {
+userBot.on('text', async (ctx) => {
   try {
     ctx.sendChatAction('typing');
     const response = await botLogicService.processTextMessage(ctx.from.id, ctx.message.text);
@@ -39,7 +39,7 @@ bot.on('text', async (ctx) => {
   }
 });
 
-bot.on('voice', async (ctx) => {
+userBot.on('voice', async (ctx) => {
   try {
     ctx.sendChatAction('typing');
     const fileId = ctx.message.voice.file_id;
@@ -50,6 +50,11 @@ bot.on('voice', async (ctx) => {
     logger.error('Error processing voice message:', error);
     ctx.reply('Произошла ошибка при обработке голосового сообщения. Пожалуйста, попробуйте еще раз.');
   }
+});
+
+userBot.catch((error, ctx) => {
+  logger.error(`Error in user bot: ${error}`);
+  // Можно добавить дополнительную логику обработки ошибок
 });
 
 async function sendLongMessage(ctx, text) {
@@ -64,4 +69,4 @@ async function sendLongMessage(ctx, text) {
   }
 }
 
-module.exports = bot;
+module.exports = userBot;

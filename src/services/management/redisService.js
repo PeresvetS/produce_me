@@ -6,7 +6,7 @@ const config = require('../../config');
 
 class RedisService {
   constructor() {
-    this.redis = new Redis(config.redis.url);
+    this.redis = new Redis(config.database.redis);
     this.getAsync = promisify(this.redis.get).bind(this.redis);
     this.setAsync = promisify(this.redis.set).bind(this.redis);
     this.delAsync = promisify(this.redis.del).bind(this.redis);

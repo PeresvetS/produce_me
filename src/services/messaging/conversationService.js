@@ -1,7 +1,7 @@
 // src/services/messaging/conversationService.js
 
 const { ConversationChain } = require("langchain/chains");
-const { ChatOpenAI } = require("langchain/chat_models/openai");
+const { ChatOpenAI } = require("@langchain/openai");
 const { BufferMemory } = require("langchain/memory");
 const { ChatPromptTemplate, HumanMessagePromptTemplate, SystemMessagePromptTemplate, MessagesPlaceholder } = require("langchain/prompts");
 

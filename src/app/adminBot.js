@@ -1,13 +1,13 @@
 // src/app/adminBot.js
 
 const { Telegraf } = require('telegraf');
-const config = require('../config/config');
-const subscriptionService = require('../services/subscriptionService');
-const subscriptionCacheService = require('../services/subscriptionCacheService');
-const adminService = require('../services/adminService');
+const config = require('../config');
+const subscriptionService = require('../services/management/subscriptionService');
+const subscriptionCacheService = require('../services/management/subscriptionCacheService');
+const adminService = require('../services/management/adminService');
 const logger = require('../utils/logger');
 
-const adminBot = new Telegraf(config.adminBotToken);
+const adminBot = new Telegraf(config.telegram.adminBotToken);
 
 // Middleware для проверки прав администратора
 adminBot.use(async (ctx, next) => {
@@ -125,5 +125,7 @@ adminBot.command('getlog', async (ctx) => {
     ctx.reply('Произошла ошибка при получении лога переписки.');
   }
 });
+
+
 
 module.exports = adminBot;

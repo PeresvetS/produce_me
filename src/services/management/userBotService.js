@@ -1,13 +1,13 @@
-// src/services/management/subscriptionService.js
+// src/services/management/userBotService.js
 
-const subscriptionService = require('./management/subscriptionService');
+const subscriptionService = require('./subscriptionService');
 const dialogService = require('../messaging/dialogService');
-const contextManagementService = require('../memory/contextManagementService');
-const longTermMemoryService = require('../memory/longTermMemoryService');
+// const contextManagementService = require('../memory/contextManagementService');
+// const longTermMemoryService = require('../memory/longTermMemoryService');
 const initialSurveyService = require('../messaging/initialSurveyService');
-const inputPreprocessingService = require('../messaging/inputPreprocessingService');
-const simpleNlpService = require('../messaging/simpleNlpService');
-const insightExtractionService = require('../messaging/insightExtractionService');
+// const inputPreprocessingService = require('../messaging/inputPreprocessingService');
+// const simpleNlpService = require('../messaging/simpleNlpService');
+// const insightExtractionService = require('../memory/insightExtractionService');
 const groqService = require('../messaging/groqService');
 const logger = require('../../utils/logger');
 
@@ -19,7 +19,7 @@ class BotLogicService {
         ? 'Начинаем новый диалог с AI-продюсером! Чем я могу тебе помочь?'
         : 'Добро пожаловать, я твой AI-продюсер Лея! Чтобы начать общение, просто отправь сообщение';
       await dialogService.incrementNewDialogCount(userId);
-      await contextManagementService.resetConversation(userId);
+      // await contextManagementService.resetConversation(userId);
       return message;
     } else {
       return 'У тебя нет активной подписки. Пожалуйста, обнови твою подписку через @neuro_zen_helps';
@@ -42,23 +42,24 @@ class BotLogicService {
         return 'У тебя нет активной подписки. Пожалуйста, обнови твою подписку через @neuro_zen_helps';
       }
 
-      const cleanedMessage = await inputPreprocessingService.cleanInput(rawMessage);
-      const preprocessedMessage = await inputPreprocessingService.preprocess(cleanedMessage);
+      // const cleanedMessage = await inputPreprocessingService.cleanInput(rawMessage);
+      // const preprocessedMessage = await inputPreprocessingService.preprocess(cleanedMessage);
 
-      const relevantMemories = await longTermMemoryService.getRelevantMemories(userId, preprocessedMessage);
-      const contextWithMemories = `Relevant memories:\n${relevantMemories.join('\n')}\n\nCurrent message: ${preprocessedMessage}`;
+      // const relevantMemories = await longTermMemoryService.getRelevantMemories(userId, preprocessedMessage);
+      // const contextWithMemories = `Relevant memories:\n${relevantMemories.join('\n')}\n\nCurrent message: ${preprocessedMessage}`;
+      const contextWithMemories = rawMessage;
 
       const response = await contextManagementService.processMessage(userId, contextWithMemories);
 
-      await longTermMemoryService.addMemory(userId, preprocessedMessage);
+      // await longTermMemoryService.addMemory(userId, preprocessedMessage);
 
-      const containsKeywords = simpleNlpService.analyzeText(preprocessedMessage);
+      // const containsKeywords = simpleNlpService.analyzeText(preprocessedMessage);
 
       const dialogCounts = await dialogService.getDialogCounts(userId);
-      if (containsKeywords || dialogCounts.messageCount % 15 === 0) {
-        const conversation = await contextManagementService.getConversationHistory(userId);
-        await insightExtractionService.extractInsights(userId, conversation);
-      }
+      // if (containsKeywords || dialogCounts.messageCount % 15 === 0) {
+      //   const conversation = await contextManagementService.getConversationHistory(userId);
+      //   await insightExtractionService.extractInsights(userId, conversation);
+      // }
       
       await dialogService.incrementDialogCount(userId);
 

@@ -2,16 +2,23 @@
 
 const prisma = require('../../db/prisma');
 const logger = require('../../utils/logger');
+const config = require('../../config');
 
 class AdminService {
   async isAdmin(userId) {
     logger.info(`Checking if user ${userId} is an admin`);
     try {
-      const admin = await prisma.admin.findUnique({
-        where: { userId: userId }
-      });
+      // const admin = await prisma.admin.findUnique({
+      //   where: { userId: userId }
+      // });
 
-      return !!admin;
+      if (config.management.admin == userId) {
+        return true;
+      } 
+
+      return false;
+
+      // return !!admin;
     } catch (error) {
       logger.error('Error checking admin status:', error);
       return false;

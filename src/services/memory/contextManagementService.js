@@ -3,8 +3,9 @@
 const { ConversationChain } = require('langchain/chains');
 const { BufferMemory } = require('langchain/memory');
 const { LLMChain } = require("langchain/chains");
-const { OpenAI } = require("langchain/llms/openai");
-const { PromptTemplate } = require("langchain/prompts");
+const { ChatOpenAI } = require("@langchain/openai");
+const { PromptTemplate } = require("@langchain/core/prompts");
+const { StringOutputParser } = require("@langchain/core/output_parsers");
 const logger = require('../../utils/logger');
 const modelSelectionService = require('../messaging/modelSelectionService');
 const dataManagementService = require('../management/dataManagementService');
@@ -12,12 +13,13 @@ const dataManagementService = require('../management/dataManagementService');
 class ContextManagementService {
   constructor() {
     this.conversations = new Map();
-    this.llm = new OpenAI({ temperature: 0.7 });
+    this.llm = new ChatOpenAI({ temperature: 0.7 });
     this.promptSelectionChain = new LLMChain({
       llm: this.llm,
       prompt: PromptTemplate.fromTemplate(
         "Based on the following context and user data, select the most appropriate system prompt from the list or generate a new one if necessary. Context: {context}\n\nUser data: {userData}\n\nAvailable prompts:\n1. You are an AI assistant focused on personal growth and development.\n2. You are an AI career advisor helping with professional development.\n3. You are an AI therapist providing emotional support and guidance.\n\nSelected or generated prompt:"
       ),
+      outputParser: new StringOutputParser(),
     });
   }
 
@@ -26,8 +28,9 @@ class ContextManagementService {
       const memory = new BufferMemory();
       const model = await modelSelectionService.selectModel(userId);
       const systemPrompt = await this.getSystemPrompt(userId, "");
+
       const chain = new ConversationChain({ 
-        llm: model, 
+        llm: new ChatOpenAI({ modelName: model, temperature: 0.7 }), 
         memory,
         prompt: PromptTemplate.fromTemplate(
           `${systemPrompt}\n\nHuman: {input}\nAI: `
@@ -63,20 +66,21 @@ class ContextManagementService {
   }
 
   async getSystemPrompt(userId, context) {
-    logger.info(`Getting system prompt for user ${userId}`);
-    try {
-      const userData = await dataManagementService.getUserData(userId);
-      const result = await this.promptSelectionChain.call({ 
-        context: context,
-        userData: JSON.stringify(userData)
-      });
-      const selectedPrompt = result.text.trim();
-      logger.info(`Selected system prompt for user ${userId}: ${selectedPrompt}`);
-      return selectedPrompt;
-    } catch (error) {
-      logger.error(`Error getting system prompt for user ${userId}:`, error);
-      throw error;
-    }
+    return 'You are helpful assistant';
+    // logger.info(`Getting system prompt for user ${userId}`);
+    // try {
+    //   const userData = await dataManagementService.getUserData(userId);
+    //   const result = await this.promptSelectionChain.call({ 
+    //     context: context,
+    //     userData: JSON.stringify(userData)
+    //   });
+    //   const selectedPrompt = result;
+    //   logger.info(`Selected system prompt for user ${userId}: ${selectedPrompt}`);
+    //   return selectedPrompt;
+    // } catch (error) {
+    //   logger.error(`Error getting system prompt for user ${userId}:`, error);
+    //   throw error;
+    // }
   }
 
   async updateSystemPrompt(userId, newPrompt) {
