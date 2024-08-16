@@ -1,13 +1,15 @@
-// groqService.js
+// src/services/groqService.js
 
 const Groq = require('groq-sdk');
 const fs = require('fs');
 const logger = require('../utils/logger');
+const config = require('../config');
 
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+const groq = new Groq({ apiKey: config.groqApiKey });
 
 module.exports = {
   async transcribeAudio(filePath) {
+    logger.info(`Начало транскрипции аудио файла: ${filePath}`);
     try {
       const transcription = await groq.audio.transcriptions.create({
         file: fs.createReadStream(filePath),
@@ -15,11 +17,11 @@ module.exports = {
         language: "ru",  // Предполагаем, что сообщения на русском языке
       });
       
-      logger.info('Audio transcribed successfully');
+      logger.info('Аудио успешно транскрибировано');
       return transcription.text;
     } catch (error) {
-      logger.error('Error transcribing audio:', error);
-      throw error;
+      logger.error('Ошибка при транскрипции аудио:', error);
+      throw new Error('Не удалось транскрибировать аудио: ' + error.message);
     }
   }
 };

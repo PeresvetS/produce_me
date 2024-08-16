@@ -1,13 +1,12 @@
-// adminBot.js
+// src/app/adminBot.js
 
-const { Telegraf } = require('telegraf');
-const config = require('../config/config');
-const subscriptionService = require('../services/subscriptionService');
-const subscriptionCacheService = require('../services/subscriptionCacheService');
+const { Bot, session } = require('grammy');
+const config = require('../config');
+const { subscriptionService, subscriptionCacheService } = require('../services/subscription');
 const adminService = require('../services/adminService');
 const logger = require('../utils/logger');
 
-const adminBot = new Telegraf(config.adminBotToken);
+const adminBot = new Bot(config.adminBotToken);
 
 // Middleware для проверки прав администратора
 adminBot.use(async (ctx, next) => {
@@ -31,13 +30,12 @@ adminBot.command('stats', async (ctx) => {
 Активных пользователей: ${stats.activeUsers}
 Общее количество диалогов: ${stats.totalDialogs}
     `;
-    ctx.reply(message);
+    await ctx.reply(message);
   } catch (error) {
     logger.error('Error fetching stats:', error);
-    ctx.reply('Произошла ошибка при получении статистики');
+    await ctx.reply('Произошла ошибка при получении статистики');
   }
 });
-
 
 adminBot.command('users', async (ctx) => {
   try {
@@ -47,45 +45,53 @@ adminBot.command('users', async (ctx) => {
       const subscriptionStatus = user.subscriptionEnd ? `Подписка до ${user.subscriptionEnd}` : 'Нет активной подписки';
       message += `ID: ${user.id}, Имя: ${user.name}, Username: @${user.username}, Диалогов: ${user.dialogCount}, ${subscriptionStatus}\n\n`;
     });
-    ctx.reply(message);
+    await ctx.reply(message);
   } catch (error) {
     logger.error('Error fetching users:', error);
-    ctx.reply('Произошла ошибка при получении списка пользователей.');
+    await ctx.reply('Произошла ошибка при получении списка пользователей.');
   }
 });
 
 adminBot.command('addsubscription', async (ctx) => {
-  const args = ctx.message.text.split(' ');
-  if (args.length !== 3) {
-    ctx.reply('Использование: /addsubscription @username количество_месяцев');
+  logger.info('Received addsubscription command');
+  const fullCommand = ctx.message.text;
+  logger.info(`Full command: ${fullCommand}`);
+  
+  // Удаляем команду из строки и разбиваем оставшуюся часть на аргументы
+  const args = fullCommand.split(' ').slice(1);
+  logger.info(`Parsed args: ${JSON.stringify(args)}`);
+
+  if (args.length !== 2) {
+    await ctx.reply('Использование: /addsubscription @username количество_месяцев');
     return;
   }
 
-  const username = args[1].replace('@', '');
-  const months = parseInt(args[2]);
+  const [username, monthsStr] = args;
+  const months = parseInt(monthsStr);
+
+  logger.info(`Attempting to add subscription: username=${username}, months=${months}`);
 
   if (isNaN(months) || months < 1 || months > 12) {
-    ctx.reply('Количество месяцев должно быть числом от 1 до 12');
+    await ctx.reply('Количество месяцев должно быть числом от 1 до 12');
     return;
   }
 
   try {
-    const result = await subscriptionService.addSubscription(username, months);
-    ctx.reply(result);
+    const result = await subscriptionService.addSubscription(username.replace('@', ''), months);
+    logger.info(`Subscription added successfully: ${result}`);
+    await ctx.reply(result);
   } catch (error) {
     logger.error('Error adding subscription:', error);
-    ctx.reply('Произошла ошибка при добавлении подписки.');
+    await ctx.reply('Произошла ошибка при добавлении подписки.');
   }
 });
 
 adminBot.command('userstats', async (ctx) => {
-  const args = ctx.message.text.split(' ');
-  if (args.length !== 2) {
-    ctx.reply('Использование: /userstats userId');
+  const userId = ctx.match;
+  if (!userId) {
+    await ctx.reply('Использование: /userstats userId');
     return;
   }
-
-  const userId = args[1];
 
   try {
     const user = await subscriptionService.getUserInfo(userId);
@@ -98,35 +104,31 @@ Username: ${user.username}
 Отправлено сообщений: ${messageCount}
 Подписка до: ${user.subscriptionEnd || 'Нет активной подписки'}
     `;
-    ctx.reply(message);
+    await ctx.reply(message);
   } catch (error) {
     logger.error('Error fetching user stats:', error);
-    ctx.reply('Произошла ошибка при получении статистики пользователя');
+    await ctx.reply('Произошла ошибка при получении статистики пользователя');
   }
 });
 
 adminBot.command('getlog', async (ctx) => {
-  const args = ctx.message.text.split(' ');
-  if (args.length !== 2) {
-    ctx.reply('Использование: /getlog userId');
+  const userId = ctx.match;
+  if (!userId) {
+    await ctx.reply('Использование: /getlog userId');
     return;
   }
-
-  const userId = args[1];
 
   try {
     const log = await goapiService.getConversationLog(userId);
     if (log.length > 4096) {
-      ctx.replyWithDocument({ source: Buffer.from(log), filename: `conversation_log_${userId}.txt` });
+      await ctx.replyWithDocument(new InputFile(Buffer.from(log), `conversation_log_${userId}.txt`));
     } else {
-      ctx.reply(log);
+      await ctx.reply(log);
     }
   } catch (error) {
     logger.error('Error fetching conversation log:', error);
-    ctx.reply('Произошла ошибка при получении лога переписки.');
+    await ctx.reply('Произошла ошибка при получении лога переписки.');
   }
 });
-
-
 
 module.exports = adminBot;

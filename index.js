@@ -1,37 +1,58 @@
 // index.js
 
-console.log('Starting application...');
-console.log('Environment variables:');
-console.log('NODE_ENV:', process.env.NODE_ENV);
-console.log('TELEGRAM_BOT_TOKEN:', process.env.TELEGRAM_BOT_TOKEN ? 'Set' : 'Not set');
-console.log('ADMIN_BOT_TOKEN:', process.env.ADMIN_BOT_TOKEN ? 'Set' : 'Not set');
-console.log('AIRTABLE_API_KEY:', process.env.AIRTABLE_API_KEY ? 'Set' : 'Not set');
-console.log('AIRTABLE_BASE_ID:', process.env.AIRTABLE_BASE_ID ? 'Set' : 'Not set');
-console.log('AIRTABLE_USERS_TABLE_ID:', process.env.AIRTABLE_USERS_TABLE_ID ? 'Set' : 'Not set');
-console.log('GOAPI_KEY:', process.env.GOAPI_KEY ? 'Set' : 'Not set');
-console.log('GIZMO_ID:', process.env.GIZMO_ID ? 'Set' : 'Not set');
-
 const userBot = require('./src/app/userBot');
 const adminBot = require('./src/app/adminBot');
 const logger = require('./src/utils/logger');
 
-userBot.launch().then(() => {
-  logger.info('User bot started');
-}).catch((error) => {
-  logger.error('Error starting user bot:', error);
+async function startBot(bot, name) {
+  return new Promise((resolve, reject) => {
+    bot.start({
+      onStart: (botInfo) => {
+        logger.info(`${name} @${botInfo.username} started`);
+        resolve();
+      },
+    }).catch(reject);
+  });
+}
+
+async function startBots() {
+  try {
+    logger.info('Starting user bot...');
+    await startBot(userBot, 'User bot');
+    
+    logger.info('Starting admin bot...');
+    await startBot(adminBot, 'Admin bot');
+    
+    logger.info('All bots started successfully');
+  } catch (error) {
+    logger.error('Error starting bots:', error);
+    process.exit(1);
+  }
+}
+
+startBots().catch((error) => {
+  logger.error('Unhandled error during bot startup:', error);
+  process.exit(1);
 });
 
-adminBot.launch().then(() => {
-  logger.info('Admin bot started');
-}).catch((error) => {
-  logger.error('Error starting admin bot:', error);
+// Обработка необработанных ошибок
+process.on('uncaughtException', (error) => {
+  logger.error('Uncaught Exception:', error);
 });
 
-process.once('SIGINT', () => {
-  userBot.stop('SIGINT');
-  adminBot.stop('SIGINT');
+process.on('unhandledRejection', (reason, promise) => {
+  logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
 });
-process.once('SIGTERM', () => {
-  userBot.stop('SIGTERM');
-  adminBot.stop('SIGTERM');
-});
+
+// Graceful shutdown
+async function shutdown(signal) {
+  logger.info(`Received ${signal}. Shutting down gracefully.`);
+  await Promise.all([
+    userBot.stop(),
+    adminBot.stop()
+  ]);
+  process.exit(0);
+}
+
+process.once('SIGINT', () => shutdown('SIGINT'));
+process.once('SIGTERM', () => shutdown('SIGTERM'));

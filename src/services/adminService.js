@@ -1,20 +1,22 @@
-// adminService.js
+// src/services/adminService.js
 
-const airtable = require('../db/airtable');
-const config = require('../config/config');
+// const prisma = require('../db/prisma');
 const logger = require('../utils/logger');
-
-const Admins = airtable(config.airtableAdminsTableId);
+const config = require('../config');
 
 module.exports = {
   async isAdmin(userId) {
     logger.info(`Checking if user ${userId} is an admin`);
     try {
-      const records = await Admins.select({
-        filterByFormula: `{UserId} = '${userId}'`
-      }).firstPage();
+    //   const admin = await prisma.admin.findUnique({ where: { userId: userId.toString() } });
+    //   return !!admin;
 
-      return records.length > 0;
+    if (config.adminTgId == userId) {
+      return true;
+    }
+
+    return false;
+ 
     } catch (error) {
       logger.error('Error checking admin status:', error);
       return false;
