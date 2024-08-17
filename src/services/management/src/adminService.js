@@ -1,8 +1,8 @@
-// src/services/adminService.js
+// src/services/management/src/adminService.js
 
-// const prisma = require('../db/prisma');
-const logger = require('../utils/logger');
-const config = require('../config');
+// const prisma = require('../../../db/prisma');
+const logger = require('../../../utils/logger');
+const config = require('../../../config');
 
 module.exports = {
   async isAdmin(userId) {

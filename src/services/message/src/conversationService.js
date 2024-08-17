@@ -1,4 +1,4 @@
-// src/services/goApi/src/conversationService.js
+// src/services/message/src/conversationService.js
 
 const fs = require('fs').promises;
 const path = require('path');
@@ -15,8 +15,7 @@ module.exports = {
   },
 
   async logConversation(userId, userMessage, assistantMessage) {
-    const logDir = path.join(__dirname, `../../../../${conversations}`);
-    const logFile = path.join(logDir, `${userId}.log`);
+    const logFile = path.join(__dirname, `../../../logs/conversations/${userId}.log`);
 
     const logEntry = `
 User: ${userMessage}
@@ -34,7 +33,7 @@ Timestamp: ${new Date().toISOString()}
   },
 
   async getConversationLog(userId) {
-    const logFile = path.join(__dirname, '..', '..', 'logs', 'conversations', `${userId}.log`);
+    const logFile = path.join(__dirname, `../../../logs/conversations/${userId}.log`);
     try {
       const log = await fs.readFile(logFile, 'utf-8');
       return log;

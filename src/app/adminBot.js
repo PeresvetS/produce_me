@@ -2,8 +2,8 @@
 
 const { Bot, session } = require('grammy');
 const config = require('../config');
-const { subscriptionService, subscriptionCacheService } = require('../services/subscription');
-const adminService = require('../services/adminService');
+const subscriptionService = require('../services/subscription');
+const managementService = require('../services/management/');
 const logger = require('../utils/logger');
 
 const adminBot = new Bot(config.adminBotToken);
@@ -11,7 +11,7 @@ const adminBot = new Bot(config.adminBotToken);
 // Middleware для проверки прав администратора
 adminBot.use(async (ctx, next) => {
   const userId = ctx.from.id;
-  if (await adminService.isAdmin(userId)) {
+  if (await managementService.isAdmin(userId)) {
     return next();
   } else {
     logger.warn(`Unauthorized access attempt by user ${userId}`);
@@ -95,7 +95,7 @@ adminBot.command('userstats', async (ctx) => {
 
   try {
     const user = await subscriptionService.getUserInfo(userId);
-    const messageCount = await subscriptionCacheService.getMessageCount(userId);
+    const messageCount = await subscriptionService.getMessageCount(userId);
     const message = `
 Статистика пользователя ${userId}:
 Имя: ${user.name}

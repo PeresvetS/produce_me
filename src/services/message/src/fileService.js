@@ -1,4 +1,4 @@
-// src/services/goApi/src/fileService.js
+// src/services/message/src/fileService.js
 
 const axios = require('axios');
 const FormData = require('form-data');
@@ -6,7 +6,7 @@ const fs = require('fs').promises;
 const path = require('path');
 const config = require('../../../config');
 const logger = require('../../../utils/logger');
-const subscriptionService = require('../../subscription/src/subscriptionService');
+const subscriptionService = require('../../subscription');
 const groqService = require('../../groqService');
 const messageService = require('./messageService');
 

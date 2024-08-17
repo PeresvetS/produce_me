@@ -15,6 +15,7 @@ model User {
   messageCount    Int       @default(0)
   newDialogCount  Int       @default(0)
   conversationId  String?
+  userData        Json?    
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 }

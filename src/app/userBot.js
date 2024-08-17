@@ -5,9 +5,10 @@ const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
 const config = require('../config');
-const { subscriptionService, subscriptionCacheService } = require('../services/subscription');
+const subscriptionService = require('../services/subscription');
 const dialogService = require('../services/dialogService');
-const goapiService = require('../services/goApi');
+const goapiService = require('../services/message');
+const managementService = require('../services/management');
 const logger = require('../utils/logger');
 
 const bot = new Bot(config.userBotToken);
@@ -18,7 +19,8 @@ bot.use(session({ initial: () => ({ conversationId: null }) }));
 async function startNewDialog(ctx, isNewProducer = false) {
   const userId = ctx.from.id;
   const username = ctx.from.username;
-  const subscriptionStatus = await subscriptionService.checkOrCreateUser(userId, username);
+  await managementService.createUser(userId, username);
+  const subscriptionStatus = await subscriptionService.checkSubscription(userId);
   if (subscriptionStatus) {
     let message = isNewProducer 
       ? 'Начинаем новый диалог с AI-продюсером! Чем я могу тебе помочь?'
@@ -60,7 +62,7 @@ bot.on('message:text', async (ctx) => {
     let response = await goapiService.sendMessage(userId, message);
     logger.info(`Received response from GoAPI for user ${userId}: ${response}`);
     
-    await subscriptionCacheService.logMessage(userId);
+    await subscriptionService.logMessage(userId);
     await dialogService.incrementDialogCount(userId);
 
     // Отправляем ответ пользователю
@@ -117,7 +119,7 @@ bot.on('message:voice', async (ctx) => {
       if (err) logger.error('Error deleting temp file:', err);
     });
 
-    await subscriptionCacheService.logMessage(userId);
+    await subscriptionService.logMessage(userId);
     await dialogService.incrementDialogCount(userId);
 
     await ctx.reply(aiResponse);
@@ -126,43 +128,5 @@ bot.on('message:voice', async (ctx) => {
     await ctx.reply('Произошла ошибка при обработке голосового сообщения. Пожалуйста, попробуйте еще раз.');
   }
 });
-
-// bot.command('mindmap', async (ctx) => {
-//   const userId = ctx.from.id;
-//   const topic = ctx.match;
-
-//   if (!topic) {
-//     await ctx.reply('Пожалуйста, укажите тему для mindmap. Например: /mindmap Искусственный интеллект');
-//     return;
-//   }
-
-//   try {
-//     const subscriptionStatus = await subscriptionService.checkSubscription(userId);
-//     if (!subscriptionStatus) {
-//       await ctx.reply('У тебя нет активной подписки. Пожалуйста, обнови твою подписку через @neuro_zen_helps');
-//       return;
-//     }
-
-//     await ctx.replyWithChatAction('upload_photo');
-
-//     const mindmapJSON = await goapiService.createMindMapJSON(userId, topic);
-
-//     // Здесь должна быть логика создания изображения mindmap
-//     // Так как у нас нет прямого доступа к объекту go, мы должны использовать
-//     // другую библиотеку для создания изображения или получать его от внешнего сервиса
-
-//     // Предположим, что у нас есть функция createMindMapImage, которая возвращает Buffer
-//     const mindmapImageBuffer = await createMindMapImage(mindmapJSON);
-
-//     await ctx.replyWithPhoto(new InputFile(mindmapImageBuffer));
-
-//     await subscriptionCacheService.logMessage(userId);
-//     await dialogService.incrementDialogCount(userId);
-
-//   } catch (error) {
-//     logger.error('Error creating mindmap:', error);
-//     await ctx.reply('Произошла ошибка при создании mindmap. Пожалуйста, попробуйте еще раз или обратитесь в службу поддержки.');
-//   }
-// });
 
 module.exports = bot;
