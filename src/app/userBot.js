@@ -2,14 +2,15 @@
 
 const { Bot, session, InputFile } = require('grammy');
 const axios = require('axios');
-const fs = require('fs');
+const fs = require('fs').promises;
 const path = require('path');
 const config = require('../config');
 const subscriptionService = require('../services/subscription');
 const dialogService = require('../services/dialogService');
-const goapiService = require('../services/message');
+const messageService = require('../services/message');
 const managementService = require('../services/management');
 const logger = require('../utils/logger');
+const cleanMessage = require('../utils/cleanMessage');
 
 const bot = new Bot(config.userBotToken);
 
@@ -59,13 +60,12 @@ bot.on('message:text', async (ctx) => {
     await ctx.replyWithChatAction('typing');
 
     logger.info(`Sending message to GoAPI for user ${userId}`);
-    let response = await goapiService.sendMessage(userId, message);
+    let response = await messageService.sendMessage(userId, message);
     logger.info(`Received response from GoAPI for user ${userId}: ${response}`);
     
     await subscriptionService.logMessage(userId);
     await dialogService.incrementDialogCount(userId);
 
-    // Отправляем ответ пользователю
     const maxLength = 4096;
     if (response.length <= maxLength) {
       await ctx.reply(response, { parse_mode: 'HTML' });
@@ -113,7 +113,7 @@ bot.on('message:voice', async (ctx) => {
       writer.on('error', reject);
     });
 
-    const aiResponse = await goapiService.processVoiceMessage(userId, tempFilePath);
+    const aiResponse = await messageService.processVoiceMessage(userId, tempFilePath);
 
     fs.unlink(tempFilePath, (err) => {
       if (err) logger.error('Error deleting temp file:', err);
@@ -128,5 +128,78 @@ bot.on('message:voice', async (ctx) => {
     await ctx.reply('Произошла ошибка при обработке голосового сообщения. Пожалуйста, попробуйте еще раз.');
   }
 });
+
+bot.on(['message:document', 'message:photo'], async (ctx) => {
+  const userId = ctx.from.id;
+
+  try {
+    const subscriptionStatus = await subscriptionService.checkSubscription(userId);
+    if (!subscriptionStatus) {
+      await ctx.reply('У тебя нет активной подписки. Пожалуйста, обнови твою подписку через @neuro_zen_helps');
+      return;
+    }
+
+    await ctx.replyWithChatAction('typing');
+
+    let file;
+    let caption;
+    if (ctx.message.document) {
+      file = ctx.message.document;
+      caption = ctx.message.caption || 'Проанализируй этот документ';
+    } else if (ctx.message.photo) {
+      file = ctx.message.photo[ctx.message.photo.length - 1]; 
+      caption = ctx.message.caption || 'Опиши это изображение';
+    }
+
+    await ctx.reply('Минуту, обрабатываю файл');
+  
+
+    const fileId = file.file_id;
+    const fileInfo = await ctx.api.getFile(fileId);
+    const fileUrl = `https://api.telegram.org/file/bot${config.userBotToken}/${fileInfo.file_path}`;
+    
+    const response = await axios({
+      method: 'get',
+      url: fileUrl,
+      responseType: 'arraybuffer'
+    });
+
+    const tempDir = path.join(__dirname, '../../temp');
+    await fs.mkdir(tempDir, { recursive: true });
+
+    const tempFilePath = path.join(tempDir, `file_${userId}_${Date.now()}${path.extname(fileInfo.file_path)}`);
+    await fs.writeFile(tempFilePath, response.data);
+
+    logger.info(`File saved: ${tempFilePath}`);
+
+    const uploadedFile = await messageService.uploadFile(userId, tempFilePath);
+    logger.info(`File uploaded: ${JSON.stringify(uploadedFile)}`);
+
+    const aiResponse = await messageService.sendMessageWithFile(userId, caption, uploadedFile);
+    logger.info(`AI Response received, length: ${aiResponse.length}`);
+
+    await fs.unlink(tempFilePath);
+
+    await subscriptionService.logMessage(userId);
+    await dialogService.incrementDialogCount(userId);
+
+    // Отправляем ответ пользователю
+    const maxLength = 4096;
+    const cleanResponse = cleanMessage(aiResponse).trim();
+    if (cleanResponse.length <= maxLength) {
+      await ctx.reply(cleanResponse, { parse_mode: 'HTML' });
+    } else {
+      const parts = cleanResponse.match(new RegExp(`.{1,${maxLength}}`, 'g'));
+      for (const part of parts) {
+        await ctx.reply(part, { parse_mode: 'HTML' });
+      }
+    }
+  } catch (error) {
+    logger.error('Error processing file:', error);
+    await ctx.reply('Произошла ошибка при обработке файла. Пожалуйста, попробуйте еще раз.');
+  }
+});
+
+
 
 module.exports = bot;

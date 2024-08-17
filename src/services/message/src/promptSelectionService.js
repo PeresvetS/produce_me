@@ -47,7 +47,7 @@ class PromptSelectionService {
   async updatePrompt(userId, newPrompt) {
     logger.info(`Updating system prompt for user ${userId}`);
     try {
-      await dataManagementService.updateUserData(userId, { currentSystemPrompt: newPrompt });
+      await managementService.updateUserData(userId, { currentSystemPrompt: newPrompt });
       logger.info(`System prompt updated for user ${userId}`);
     } catch (error) {
       logger.error(`Error updating system prompt for user ${userId}:`, error);
