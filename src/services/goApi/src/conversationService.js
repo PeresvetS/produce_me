@@ -15,7 +15,7 @@ module.exports = {
   },
 
   async logConversation(userId, userMessage, assistantMessage) {
-    const logDir = path.join(__dirname, '..', '..', 'logs', 'conversations');
+    const logDir = path.join(__dirname, `../../../../${conversations}`);
     const logFile = path.join(logDir, `${userId}.log`);
 
     const logEntry = `
