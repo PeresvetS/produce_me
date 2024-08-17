@@ -3,42 +3,22 @@
 const axios = require('axios');
 const config = require('../../../config');
 const logger = require('../../../utils/logger');
-const documentReader = require('../../documentReader');
+const documentReaderService = require('./documentReaderService');
 const subscriptionService = require('../../subscription/');
 const conversationService = require('./conversationService');
 const promptSelectionService = require('./promptSelectionService');
 
 
-
-async function processDocumentUrl(userId, documentUrl, originalMessage) {
-  try {
-    const documentContent = await documentReader.readDocument(documentUrl);
-    if (documentContent.trim() === '') {
-      return 'Не удалось прочитать содержимое документа. Возможно, документ пуст или у меня нет доступа к нему.';
-    }
-    let content = `Содержимое документа по ссылке ${documentUrl}:\n\n${documentContent}\n\n`;
-    const originalUserText = originalMessage.replace(documentUrl, '').trim();
-    if (originalUserText) {
-      content += `Также мой запрос: ${originalUserText}\n\n`;
-    }
-    content += `Пожалуйста, проанализируй этот документ, он важен для нашего диалога.`;
-    return content;
-  } catch (error) {
-    logger.error('Error reading document:', error);
-    return `Не удалось прочитать документ: ${error.message}. Пожалуйста, убедитесь, что ссылка корректна, документ доступен для чтения и не является приватным.`;
-  }
-};
-
 async function processMessageContent(userId, message) {
   const urlRegex = /(https?:\/\/[^\s]+)/g;
   const urls = message.match(urlRegex);
 
-  if (urls && (urls[0].includes('docs.google.com') || urls[0].includes('docs.yandex.ru'))) {
-    return await processDocumentUrl(userId, urls[0], message);
+  if (urls && (urls[0].includes('docs.google.com') || urls[0].includes('drive.google.com') || urls[0].includes('disk.yandex.ru'))) {
+    return await documentReaderService.processDocumentUrl(urls[0], message);
   }
 
   return message;
-};
+}
 
 async function sendMessage(userId, message) {
   logger.info(`Sending message for user ${userId} to GoAPI`);
@@ -85,7 +65,7 @@ async function sendMessage(userId, message) {
     logger.error('Error sending message to GoAPI:', error);
     throw error;
   }
-};
+}
 
 async function processResponse(response, conversationId) {
   let assistantMessage = '';
@@ -114,12 +94,10 @@ async function processResponse(response, conversationId) {
   }
 
   return { assistantMessage, newConversationId: conversationId };
+}
+
+module.exports = {  
+  processMessageContent,
+  sendMessage,
+  processResponse,
 };
-
-
-  module.exports = { 
-    processDocumentUrl, 
-    processMessageContent,
-    sendMessage,
-    processResponse,
-  };

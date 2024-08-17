@@ -1,7 +1,7 @@
-// src/services/dialogService.js
+// src/services/management/src/dialogService.js
 
-const prisma = require('../db/prisma');
-const logger = require('../utils/logger');
+const prisma = require('../../../db/prisma');
+const logger = require('../../../utils/logger');
 
 module.exports = {
   async incrementDialogCount(userId) {

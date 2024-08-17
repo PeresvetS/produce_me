@@ -1,14 +1,13 @@
 // src/app/userBot.js
 
-const { Bot, session, InputFile } = require('grammy');
+const { Bot, session } = require('grammy');
 const axios = require('axios');
 const fs = require('fs').promises;
 const path = require('path');
 const config = require('../config');
 const subscriptionService = require('../services/subscription');
-const dialogService = require('../services/dialogService');
-const messageService = require('../services/message');
 const managementService = require('../services/management');
+const messageService = require('../services/message');
 const logger = require('../utils/logger');
 const cleanMessage = require('../utils/cleanMessage');
 
@@ -20,18 +19,16 @@ bot.use(session({ initial: () => ({ conversationId: null }) }));
 async function startNewDialog(ctx, isNewProducer = false) {
   const userId = ctx.from.id;
   const username = ctx.from.username;
-  await managementService.createUser(userId, username);
-  const subscriptionStatus = await subscriptionService.checkSubscription(userId);
+  const subscriptionStatus = await subscriptionService.checkOrCreateUser(userId, username);
   if (subscriptionStatus) {
     let message = isNewProducer 
       ? 'Начинаем новый диалог с AI-продюсером! Чем я могу тебе помочь?'
       : 'Добро пожаловать, я твой AI-продюсер Лея! Чтобы начать общение, просто отправь сообщение';
-    await ctx.reply(message);
-    await dialogService.incrementNewDialogCount(userId);
+    ctx.reply(message);
+    await managementService.incrementNewDialogCount(userId);
     await subscriptionService.setUserConversationId(userId, null);
-    ctx.session.conversationId = null;
   } else {
-    await ctx.reply('У тебя нет активной подписки. Пожалуйста, обнови твою подписку через @neuro_zen_helps');
+    ctx.reply('У тебя нет активной подписки. Пожалуйста, обнови твою подписку через @neuro_zen_helps');
   }
 }
 
@@ -64,7 +61,7 @@ bot.on('message:text', async (ctx) => {
     logger.info(`Received response from GoAPI for user ${userId}: ${response}`);
     
     await subscriptionService.logMessage(userId);
-    await dialogService.incrementDialogCount(userId);
+    await managementService.incrementDialogCount(userId);
 
     const maxLength = 4096;
     if (response.length <= maxLength) {
@@ -120,7 +117,7 @@ bot.on('message:voice', async (ctx) => {
     });
 
     await subscriptionService.logMessage(userId);
-    await dialogService.incrementDialogCount(userId);
+    await managementService.incrementDialogCount(userId);
 
     await ctx.reply(aiResponse);
   } catch (error) {
@@ -181,7 +178,7 @@ bot.on(['message:document', 'message:photo'], async (ctx) => {
     await fs.unlink(tempFilePath);
 
     await subscriptionService.logMessage(userId);
-    await dialogService.incrementDialogCount(userId);
+    await managementService.incrementDialogCount(userId);
 
     // Отправляем ответ пользователю
     const maxLength = 4096;
@@ -198,7 +195,11 @@ bot.on(['message:document', 'message:photo'], async (ctx) => {
     logger.error('Error processing file:', error);
     await ctx.reply('Произошла ошибка при обработке файла. Пожалуйста, попробуйте еще раз.');
   }
+
+  
 });
+
+
 
 
 
