@@ -4,6 +4,16 @@ const userBot = require('./src/app/userBot');
 const adminBot = require('./src/app/adminBot');
 const logger = require('./src/utils/logger');
 
+console.log('Starting application...');
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
 async function startBot(bot, name) {
   return new Promise((resolve, reject) => {
     bot.start({
