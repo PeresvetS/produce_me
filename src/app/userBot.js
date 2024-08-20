@@ -13,6 +13,7 @@ const cleanMessage = require('../utils/cleanMessage');
 
 const bot = new Bot(config.userBotToken);
 
+
 // Middleware для сессий
 bot.use(session({ initial: () => ({ conversationId: null }) }));
 

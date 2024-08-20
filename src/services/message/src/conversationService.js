@@ -15,7 +15,7 @@ module.exports = {
   },
 
   async logConversation(userId, userMessage, assistantMessage) {
-    const logDir = path.join(__dirname, '../../../logs/conversations/');
+    const logDir = path.join(__dirname, '../../../../logs/conversations/');
     const logFile = path.join(logDir, `${userId}.log`);
 
     const logEntry = `
@@ -34,7 +34,7 @@ Timestamp: ${new Date().toISOString()}
   },
 
   async getConversationLog(userId) {
-    const logFile = path.join(__dirname, `../../../logs/conversations/${userId}.log`);
+    const logFile = path.join(__dirname, `../../../../logs/conversations/${userId}.log`);
     try {
       const log = await fs.readFile(logFile, 'utf-8');
       return log;

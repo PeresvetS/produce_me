@@ -45,14 +45,31 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 
 // Graceful shutdown
+const SHUTDOWN_TIMEOUT = 5000; // 5 секунд
+
 async function shutdown(signal) {
   logger.info(`Received ${signal}. Shutting down gracefully.`);
-  await Promise.all([
+  const shutdownPromise = Promise.all([
     userBot.stop(),
     adminBot.stop()
   ]);
-  process.exit(0);
+
+  try {
+    await Promise.race([
+      shutdownPromise,
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Shutdown timed out')), SHUTDOWN_TIMEOUT))
+    ]);
+    logger.info('All bots stopped successfully');
+  } catch (error) {
+    logger.error('Error or timeout during shutdown:', error);
+  } finally {
+    process.exit(0);
+  }
 }
 
 process.once('SIGINT', () => shutdown('SIGINT'));
 process.once('SIGTERM', () => shutdown('SIGTERM'));
+
+['SIGINT', 'SIGTERM', 'SIGQUIT'].forEach(signal => {
+  process.on(signal, () => shutdown(signal));
+});
