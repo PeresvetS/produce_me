@@ -1,10 +1,16 @@
 // index.js
 
-const userBot = require('./src/app/userBot');
-const adminBot = require('./src/app/adminBot');
-const logger = require('./src/utils/logger');
-
 console.log('Starting application...');
+console.log('Importing dependencies...');
+const userBot = require('./src/app/userBot');
+console.log('userBot imported');
+const adminBot = require('./src/app/adminBot');
+console.log('adminBot imported');
+const logger = require('./src/utils/logger');
+console.log('logger imported');
+
+console.log('Starting bots...');
+
 process.on('uncaughtException', (error) => {
   console.error('Uncaught Exception:', error);
   process.exit(1);
@@ -79,7 +85,3 @@ async function shutdown(signal) {
 
 process.once('SIGINT', () => shutdown('SIGINT'));
 process.once('SIGTERM', () => shutdown('SIGTERM'));
-
-['SIGINT', 'SIGTERM', 'SIGQUIT'].forEach(signal => {
-  process.on(signal, () => shutdown(signal));
-});
