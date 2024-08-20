@@ -37,7 +37,6 @@ const config = {
 
 console.log('Environment variables:');
 for (const [key, value] of Object.entries(config)) {
-  console.log(`${key}: ${value}`);  
   console.log(`${key}: ${value ? 'Set' : 'Not set'}`);
 }
 

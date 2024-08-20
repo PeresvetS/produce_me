@@ -1,15 +1,30 @@
 // src/app/userBot.js
 
+console.log('Starting userBot.js');
+
+console.log('Importing dependencies...');
 const { Bot, session } = require('grammy');
+console.log('grammy imported');
 const axios = require('axios');
+console.log('axios imported');
 const fs = require('fs').promises;
+console.log('fs imported');
 const path = require('path');
+console.log('path imported');
 const config = require('../config');
+console.log('config imported');
 const subscriptionService = require('../services/subscription');
+console.log('subscriptionService imported');
 const managementService = require('../services/management');
+console.log('managementService imported');
 const messageService = require('../services/message');
+console.log('messageService imported');
 const logger = require('../utils/logger');
+console.log('logger imported');
 const cleanMessage = require('../utils/cleanMessage');
+console.log('cleanMessage imported');
+
+console.log('All dependencies imported');
 
 axios.interceptors.request.use(request => {
   console.log('Starting Request', JSON.stringify(request, null, 2));

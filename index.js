@@ -20,8 +20,6 @@ process.on('unhandledRejection', (reason, promise) => {
   console.error('Unhandled Rejection at:', promise, 'reason:', reason);
 });
 
-console.log('next bots...');
-
 async function startBot(bot, name) {
   console.log(`Starting ${name}...`);
   try {
@@ -32,8 +30,6 @@ async function startBot(bot, name) {
     throw error; // Перебрасываем ошибку, чтобы она была обработана выше
   }
 }
-
-console.log('next 2 bots...');
 
 async function startBots() {
   try {
@@ -50,7 +46,6 @@ async function startBots() {
   }
 }
 
-console.log('next 3 bots...');
 startBots().catch((error) => {
   logger.error('Unhandled error during bot startup:', error);
   process.exit(1);
