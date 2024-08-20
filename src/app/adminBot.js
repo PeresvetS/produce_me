@@ -22,13 +22,28 @@ axios.interceptors.response.use(response => {
 
 logger.info(`start of bot`);
 
+const adminBot = new Bot(config.adminBotToken, {
+  client: {
+    apiRoot: `https://api.telegram.org/bot${config.adminBotToken}`,
+    webhookReplyEnvelope: {
+      custom_session_id: `admin_bot_${Date.now()}`
+    }
+  }
+});
 
-logger.info('CONGIG:', config.adminBotToken);
+adminBot.init = async () => {
+  logger.info('Initializing admin bot...');
+  try {
+    await adminBot.api.deleteWebhook();
+    logger.info('Admin bot webhook deleted successfully');
+  } catch (error) {
+    logger.error('Error deleting admin bot webhook:', error);
+  }
+};
 
-
-const adminBot = new Bot(config.adminBotToken);
-
-logger.info(`next of bot`);
+adminBot.catch((err) => {
+  logger.error('Global error in admin bot:', err);
+});
 
 // Middleware для проверки прав администратора
 adminBot.use(async (ctx, next) => {
@@ -153,4 +168,7 @@ adminBot.command('getlog', async (ctx) => {
   }
 });
 
-module.exports = adminBot;
+module.exports = {
+  bot: adminBot,
+  init: adminBot.init
+};

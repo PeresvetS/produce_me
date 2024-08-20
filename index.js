@@ -1,15 +1,10 @@
 // index.js
 
-console.log('Starting application...');
-console.log('Importing dependencies...');
-const userBot = require('./src/app/userBot');
-console.log('userBot imported');
-const adminBot = require('./src/app/adminBot');
-console.log('adminBot imported');
+const { bot: userBot, init: initUserBot } = require('./src/app/userBot');
+const { bot: adminBot, init: initAdminBot } = require('./src/app/adminBot');
 const logger = require('./src/utils/logger');
-console.log('logger imported');
 
-console.log('Starting bots 1...');
+console.log('Starting bots...');
 
 process.on('uncaughtException', (error) => {
   console.error('Uncaught Exception:', error);
@@ -20,24 +15,30 @@ process.on('unhandledRejection', (reason, promise) => {
   console.error('Unhandled Rejection at:', promise, 'reason:', reason);
 });
 
-async function startBot(bot, name) {
+
+async function startBot(bot, init, name) {
   console.log(`Starting ${name}...`);
   try {
+    console.log(`Initializing ${name}...`);
+    await init();
+    console.log(`${name} initialized`);
+    
+    console.log(`Starting ${name}...`);
     await bot.start();
     console.log(`${name} started successfully`);
   } catch (error) {
     console.error(`Error starting ${name}:`, error);
-    throw error; // Перебрасываем ошибку, чтобы она была обработана выше
+    throw error;
   }
 }
 
 async function startBots() {
   try {
     logger.info('Starting user bot...');
-    await startBot(userBot, 'User bot');
+    await startBot(userBot, initUserBot, 'User Bot');
     
     logger.info('Starting admin bot...');
-    await startBot(adminBot, 'Admin bot');
+    await startBot(adminBot, initAdminBot, 'Admin Bot');
     
     logger.info('All bots started successfully');
   } catch (error) {

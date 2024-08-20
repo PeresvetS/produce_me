@@ -1,30 +1,15 @@
 // src/app/userBot.js
 
-console.log('Starting userBot.js');
-
-console.log('Importing dependencies...');
 const { Bot, session } = require('grammy');
-console.log('grammy imported');
 const axios = require('axios');
-console.log('axios imported');
 const fs = require('fs').promises;
-console.log('fs imported');
 const path = require('path');
-console.log('path imported');
 const config = require('../config');
-console.log('config imported');
 const subscriptionService = require('../services/subscription');
-console.log('subscriptionService imported');
 const managementService = require('../services/management');
-console.log('managementService imported');
 const messageService = require('../services/message');
-console.log('messageService imported');
 const logger = require('../utils/logger');
-console.log('logger imported');
 const cleanMessage = require('../utils/cleanMessage');
-console.log('cleanMessage imported');
-
-console.log('All dependencies imported');
 
 axios.interceptors.request.use(request => {
   console.log('Starting Request', JSON.stringify(request, null, 2));
@@ -41,9 +26,30 @@ axios.interceptors.response.use(response => {
 
 logger.info(`start of bot`);
 
-const bot = new Bot(config.userBotToken);
+const bot = new Bot(config.userBotToken, {
+  client: {
+    apiRoot: `https://api.telegram.org/bot${config.userBotToken}`,
+    webhookReplyEnvelope: {
+      custom_session_id: `user_bot_${Date.now()}`
+    }
+  }
+});
 
-logger.info(`next of bot`);
+logger.info(`start of bot`);
+
+bot.init = async () => {
+  logger.info('Initializing user bot...');
+  try {
+    await bot.api.deleteWebhook();
+    logger.info('Webhook deleted successfully');
+  } catch (error) {
+    logger.error('Error deleting webhook:', error);
+  }
+};
+
+bot.catch((err) => {
+  logger.error('Global error in user bot:', err);
+});
 
 
 // Middleware для сессий
@@ -234,6 +240,7 @@ bot.on(['message:document', 'message:photo'], async (ctx) => {
 
 
 
-
-
-module.exports = bot;
+module.exports = {
+  bot: bot,
+  init: bot.init
+};
