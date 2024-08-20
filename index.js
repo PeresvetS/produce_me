@@ -9,7 +9,7 @@ console.log('adminBot imported');
 const logger = require('./src/utils/logger');
 console.log('logger imported');
 
-console.log('Starting bots...');
+console.log('Starting bots 1...');
 
 process.on('uncaughtException', (error) => {
   console.error('Uncaught Exception:', error);
