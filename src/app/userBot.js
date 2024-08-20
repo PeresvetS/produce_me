@@ -40,10 +40,18 @@ logger.info(`start of bot`);
 bot.init = async () => {
   logger.info('Initializing user bot...');
   try {
-    await bot.api.deleteWebhook();
-    logger.info('Webhook deleted successfully');
+    const webhookInfo = await bot.api.getWebhookInfo();
+    logger.info('Current webhook info:', webhookInfo);
+    
+    if (webhookInfo.url) {
+      await bot.api.deleteWebhook();
+      logger.info('Webhook deleted successfully');
+    } else {
+      logger.info('No webhook set, skipping deletion');
+    }
   } catch (error) {
-    logger.error('Error deleting webhook:', error);
+    logger.error('Error during bot initialization:', error);
+    // Не выбрасываем ошибку, чтобы продолжить инициализацию
   }
 };
 

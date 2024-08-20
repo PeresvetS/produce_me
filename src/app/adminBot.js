@@ -32,12 +32,20 @@ const adminBot = new Bot(config.adminBotToken, {
 });
 
 adminBot.init = async () => {
-  logger.info('Initializing admin bot...');
+  logger.info('Initializing user bot...');
   try {
-    await adminBot.api.deleteWebhook();
-    logger.info('Admin bot webhook deleted successfully');
+    const webhookInfo = await adminBot.api.getWebhookInfo();
+    logger.info('Current webhook info:', webhookInfo);
+    
+    if (webhookInfo.url) {
+      await adminBot.api.deleteWebhook();
+      logger.info('Webhook deleted successfully');
+    } else {
+      logger.info('No webhook set, skipping deletion');
+    }
   } catch (error) {
-    logger.error('Error deleting admin bot webhook:', error);
+    logger.error('Error during bot initialization:', error);
+    // Не выбрасываем ошибку, чтобы продолжить инициализацию
   }
 };
 

@@ -13,7 +13,19 @@ process.on('uncaughtException', (error) => {
 
 process.on('unhandledRejection', (reason, promise) => {
   console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-});
+}); 
+
+async function checkBotToken(token, botName) {
+  try {
+    const bot = new Bot(token);
+    const me = await bot.api.getMe();
+    console.log(`${botName} token is valid. Bot username: @${me.username}`);
+    return true;
+  } catch (error) {
+    console.error(`Error checking ${botName} token:`, error);
+    return false;
+  }
+}
 
 
 async function startBot(bot, init, name) {
@@ -24,25 +36,33 @@ async function startBot(bot, init, name) {
     console.log(`${name} initialized`);
     
     console.log(`Starting ${name}...`);
-    await bot.start();
-    console.log(`${name} started successfully`);
+    await bot.start({
+      onStart: (botInfo) => {
+        console.log(`${name} @${botInfo.username} started successfully`);
+      },
+    });
   } catch (error) {
     console.error(`Error starting ${name}:`, error);
-    throw error;
+    // Не выбрасываем ошибку, чтобы продолжить запуск других ботов
   }
 }
 
+
 async function startBots() {
+  const userBotTokenValid = await checkBotToken(config.userBotToken, 'User Bot');
+  const adminBotTokenValid = await checkBotToken(config.adminBotToken, 'Admin Bot');
+
+  if (!userBotTokenValid || !adminBotTokenValid) {
+    console.error('One or more bot tokens are invalid. Please check your configuration.');
+    process.exit(1);
+  }
+
   try {
-    logger.info('Starting user bot...');
     await startBot(userBot, initUserBot, 'User Bot');
-    
-    logger.info('Starting admin bot...');
     await startBot(adminBot, initAdminBot, 'Admin Bot');
-    
-    logger.info('All bots started successfully');
+    console.log('All bots started successfully');
   } catch (error) {
-    logger.error('Error starting bots:', error);
+    console.error('Error starting bots:', error);
     process.exit(1);
   }
 }
