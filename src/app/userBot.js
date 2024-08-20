@@ -26,38 +26,9 @@ axios.interceptors.response.use(response => {
 
 logger.info(`start of bot`);
 
-const bot = new Bot(config.userBotToken, {
-  client: {
-    apiRoot: `https://api.telegram.org/bot${config.userBotToken}`,
-    webhookReplyEnvelope: {
-      custom_session_id: `user_bot_${Date.now()}`
-    }
-  }
-});
+const bot = new Bot(config.userBotToken);
 
 logger.info(`start of bot`);
-
-bot.init = async () => {
-  logger.info('Initializing user bot...');
-  try {
-    const webhookInfo = await bot.api.getWebhookInfo();
-    logger.info('Current webhook info:', webhookInfo);
-    
-    if (webhookInfo.url) {
-      await bot.api.deleteWebhook();
-      logger.info('Webhook deleted successfully');
-    } else {
-      logger.info('No webhook set, skipping deletion');
-    }
-  } catch (error) {
-    logger.error('Error during bot initialization:', error);
-    // Не выбрасываем ошибку, чтобы продолжить инициализацию
-  }
-};
-
-bot.catch((err) => {
-  logger.error('Global error in user bot:', err);
-});
 
 
 // Middleware для сессий
@@ -248,7 +219,6 @@ bot.on(['message:document', 'message:photo'], async (ctx) => {
 
 
 
-module.exports = {
-  bot: bot,
-  init: bot.init
-};
+
+
+module.exports = bot;

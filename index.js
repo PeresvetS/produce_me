@@ -1,8 +1,20 @@
 // index.js
 
-const { bot: userBot, init: initUserBot } = require('./src/app/userBot');
-const { bot: adminBot, init: initAdminBot } = require('./src/app/adminBot');
+const userBot = require('./src/app/userBot');
+const adminBot = require('./src/app/adminBot');
+const { Bot } = require('grammy');
 const logger = require('./src/utils/logger');
+const config = require('./src/config');
+const http = require('http');
+
+const server = http.createServer((req, res) => {
+  res.writeHead(200, { 'Content-Type': 'text/plain' });
+  res.end('Bot server is running');
+});
+
+server.listen(process.env.PORT || 3000, () => {
+  console.log(`Server running on port ${process.env.PORT || 3000}`);
+});
 
 console.log('Starting bots...');
 
@@ -28,38 +40,31 @@ async function checkBotToken(token, botName) {
 }
 
 
-async function startBot(bot, init, name) {
-  console.log(`Starting ${name}...`);
-  try {
-    console.log(`Initializing ${name}...`);
-    await init();
-    console.log(`${name} initialized`);
-    
-    console.log(`Starting ${name}...`);
-    await bot.start({
+async function startBot(bot, name) {
+  return new Promise((resolve, reject) => {
+    bot.start({
       onStart: (botInfo) => {
-        console.log(`${name} @${botInfo.username} started successfully`);
+        logger.info(`${name} @${botInfo.username} started`);
+        resolve();
       },
-    });
-  } catch (error) {
-    console.error(`Error starting ${name}:`, error);
-    // Не выбрасываем ошибку, чтобы продолжить запуск других ботов
-  }
+    }).catch(reject);
+  });
 }
 
 
 async function startBots() {
+  console.log('Inside startBots function');
   const userBotTokenValid = await checkBotToken(config.userBotToken, 'User Bot');
   const adminBotTokenValid = await checkBotToken(config.adminBotToken, 'Admin Bot');
-
+  console.log('tokens valid');
   if (!userBotTokenValid || !adminBotTokenValid) {
     console.error('One or more bot tokens are invalid. Please check your configuration.');
     process.exit(1);
   }
 
   try {
-    await startBot(userBot, initUserBot, 'User Bot');
-    await startBot(adminBot, initAdminBot, 'Admin Bot');
+    await startBot(userBot, 'User Bot');
+    await startBot(adminBot, 'Admin Bot');
     console.log('All bots started successfully');
   } catch (error) {
     console.error('Error starting bots:', error);
@@ -67,10 +72,14 @@ async function startBots() {
   }
 }
 
-startBots().catch((error) => {
-  logger.error('Unhandled error during bot startup:', error);
-  process.exit(1);
+console.log('Calling startBots function');
+startBots().then(() => {
+  console.log('startBots completed');
+}).catch((error) => {
+  console.error('Error in startBots:', error);
 });
+
+console.log('End of main script');
 
 // Обработка необработанных ошибок
 process.on('uncaughtException', (error) => {

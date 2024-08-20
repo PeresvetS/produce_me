@@ -22,36 +22,10 @@ axios.interceptors.response.use(response => {
 
 logger.info(`start of bot`);
 
-const adminBot = new Bot(config.adminBotToken, {
-  client: {
-    apiRoot: `https://api.telegram.org/bot${config.adminBotToken}`,
-    webhookReplyEnvelope: {
-      custom_session_id: `admin_bot_${Date.now()}`
-    }
-  }
-});
 
-adminBot.init = async () => {
-  logger.info('Initializing user bot...');
-  try {
-    const webhookInfo = await adminBot.api.getWebhookInfo();
-    logger.info('Current webhook info:', webhookInfo);
-    
-    if (webhookInfo.url) {
-      await adminBot.api.deleteWebhook();
-      logger.info('Webhook deleted successfully');
-    } else {
-      logger.info('No webhook set, skipping deletion');
-    }
-  } catch (error) {
-    logger.error('Error during bot initialization:', error);
-    // Не выбрасываем ошибку, чтобы продолжить инициализацию
-  }
-};
+const adminBot = new Bot(config.adminBotToken);
 
-adminBot.catch((err) => {
-  logger.error('Global error in admin bot:', err);
-});
+logger.info(`next of bot`);
 
 // Middleware для проверки прав администратора
 adminBot.use(async (ctx, next) => {
@@ -176,7 +150,4 @@ adminBot.command('getlog', async (ctx) => {
   }
 });
 
-module.exports = {
-  bot: adminBot,
-  init: adminBot.init
-};
+module.exports = adminBot;
