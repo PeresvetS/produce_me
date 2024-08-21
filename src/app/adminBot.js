@@ -2,23 +2,9 @@
 
 const { Bot, session } = require('grammy');
 const config = require('../config');
-const axios = require('axios');
 const subscriptionService = require('../services/subscription');
 const managementService = require('../services/management/');
 const logger = require('../utils/logger');
-
-axios.interceptors.request.use(request => {
-  console.log('Starting Request', JSON.stringify(request, null, 2));
-  return request;
-});
-
-axios.interceptors.response.use(response => {
-  console.log('Response:', JSON.stringify(response.data, null, 2));
-  return response;
-}, error => {
-  console.error('Axios Error:', error);
-  return Promise.reject(error);
-});
 
 logger.info(`start of bot`);
 

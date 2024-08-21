@@ -11,19 +11,6 @@ const messageService = require('../services/message');
 const logger = require('../utils/logger');
 const cleanMessage = require('../utils/cleanMessage');
 
-axios.interceptors.request.use(request => {
-  console.log('Starting Request', JSON.stringify(request, null, 2));
-  return request;
-});
-
-axios.interceptors.response.use(response => {
-  console.log('Response:', JSON.stringify(response.data, null, 2));
-  return response;
-}, error => {
-  console.error('Axios Error:', error);
-  return Promise.reject(error);
-});
-
 logger.info(`start of bot`);
 
 const bot = new Bot(config.userBotToken);
