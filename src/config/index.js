@@ -12,9 +12,9 @@ const requiredEnvVars = [
   'ADMIN_BOT_TOKEN',
   'DATABASE_URL',
   'GROQ_API_KEY',
-  'GOAPI_KEY',
-  'GIZMO_ID',
   'ADMIN_TG_ID',
+  'ASSITANT_ID_OPENAI',
+  'OPENAI_API_KEY',
 ];
 
 requiredEnvVars.forEach(varName => {
@@ -28,11 +28,10 @@ const config = {
   userBotToken: process.env.TELEGRAM_BOT_TOKEN,
   adminBotToken: process.env.ADMIN_BOT_TOKEN,
   databaseUrl: process.env.DATABASE_URL,
-  goapiKey: process.env.GOAPI_KEY,
-  goapiUrl: 'https://api.goapi.xyz/api/chatgpt/v1',
-  gizmoId: process.env.GIZMO_ID,
   groqApiKey: process.env.GROQ_API_KEY,
   adminTgId: process.env.ADMIN_TG_ID,
+  assistantId: process.env.ASSITANT_ID_OPENAI,
+  openaiApiKey: process.env.OPENAI_API_KEY,
 };
 
 console.log('Environment variables:');

@@ -146,12 +146,12 @@ module.exports = {
     }
   },
 
-  async getUserConversationId(userId) {
+  async getUserThreadId(userId) { 
     logger.info(`Getting conversation ID for user: ${userId}`);
     try {
       const user = await prisma.user.findUnique({
         where: { userId: userId.toString() },
-        select: { conversationId: true }
+        select: { threadId: true }
       });
 
       if (!user) {
@@ -161,21 +161,24 @@ module.exports = {
 
       return user.conversationId;
     } catch (error) {
-      logger.error('Error in getUserConversationId:', error);
+      logger.error('Error in getUserThreadId:', error);
       throw error;
     }
   },
 
-  async setUserConversationId(userId, conversationId) {
-    logger.info(`Setting conversation ID for user: ${userId}`);
+  async setUserThreadId (userId, threadId) {
+    logger.info(`Устанавливаем ID разговора для пользователя: ${userId}, conversationId: ${conversationId}`);
     try {
-      await prisma.user.update({
+      const result = await prisma.user.update({
         where: { userId: userId.toString() },
-        data: { conversationId }
+        data: { threadId }
       });
-      logger.info(`Conversation ID set for user ${userId}: ${conversationId}`);
+      logger.info(`Результат обновления: ${JSON.stringify(result)}`);
+      if (!result) {
+        logger.warn(`Пользователь с userId: ${userId} не найден`);
+      }
     } catch (error) {
-      logger.error('Error in setUserConversationId:', error);
+      logger.error('Ошибка в setUserConversationId:', error);
       throw error;
     }
   }

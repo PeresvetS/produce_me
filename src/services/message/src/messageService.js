@@ -1,12 +1,14 @@
 // src/services/message/src/messageService.js
 
-const axios = require('axios');
+const OpenAI = require('openai');
 const config = require('../../../config');
 const logger = require('../../../utils/logger');
 const documentReaderService = require('./documentReaderService');
 const subscriptionService = require('../../subscription/');
 const conversationService = require('./conversationService');
 const promptSelectionService = require('./promptSelectionService');
+
+const openai = new OpenAI({ apiKey: config.openaiApiKey });
 
 
 async function processMessageContent(userId, message) {
@@ -18,51 +20,50 @@ async function processMessageContent(userId, message) {
   }
 
   return message;
-}
+};
+
+async function waitForRunCompletion(threadId, runId) {
+  let run;
+  do {
+    run = await openai.beta.threads.runs.retrieve(threadId, runId);
+    await new Promise(resolve => setTimeout(resolve, 1000)); // Wait for 1 second before checking again
+  } while (run.status !== 'completed');
+
+  const messages = await openai.beta.threads.messages.list(threadId);
+  return messages.data[0].content[0].text.value;
+};
+
 
 async function sendMessage(userId, message) {
-  logger.info(`Sending message for user ${userId} to GoAPI`);
+  logger.info(`Sending message for user ${userId} to OpenAI Assistants API`);
   try {
-    let conversationId = await subscriptionService.getUserConversationId(userId);
-    const url = conversationId 
-      ? `${config.goapiUrl}/conversation/${conversationId}`
-      : `${config.goapiUrl}/conversation`;
-
-    logger.info(`Using URL: ${url}`);
-
+    let threadId = await subscriptionService.getUserThreadId(userId);
     const content = await processMessageContent(userId, message);
     const systemPrompt = await promptSelectionService.selectPrompt(userId, content);
 
-    logger.info(`Request data: ${JSON.stringify({ content, systemPrompt })}`);
+    if (!threadId) {
+      const thread = await openai.beta.threads.create();
+      threadId = thread.id;
+      await subscriptionService.setUserThreadId(userId, threadId);
+    }
 
-    const response = await axios.post(url, {
-      model: 'gpt-4o',
-      content: {
-        content_type: 'text',
-        parts: [`системный промпт: ${systemPrompt}\n пользовательский промпт: ${content}`]
-      },
-      gizmo_id: config.gizmoId
-    }, {
-      headers: {
-        'X-API-Key': config.goapiKey,
-        'Content-Type': 'application/json'
-      },
-      responseType: 'stream'
+    await openai.beta.threads.messages.create(threadId, {
+      role: "user",
+      content: `системный промпт: ${systemPrompt}\n пользовательский промпт: ${content}`
     });
 
-    logger.info(`Response received from GoAPI. Status: ${response.status}`);
+    const run = await openai.beta.threads.runs.create(threadId, {
+      assistant_id: config.assistantId,
+      instructions: "Please provide a helpful and informative response."
+    });
 
-    const { assistantMessage, newConversationId } = await processResponse(response, conversationId);
-
-    if (newConversationId) {
-      await subscriptionService.setUserConversationId(userId, newConversationId);
-    }
+    const assistantMessage = await waitForRunCompletion(threadId, run.id);
 
     await conversationService.logConversation(userId, message, assistantMessage);
 
     return assistantMessage.trim();
   } catch (error) {
-    logger.error('Error sending message to GoAPI:', error);
+    logger.error('Error sending message to OpenAI Assistants API:', error);
     throw error;
   }
 }
@@ -94,7 +95,8 @@ async function processResponse(response, conversationId) {
   }
 
   return { assistantMessage, newConversationId: conversationId };
-}
+};
+
 
 module.exports = {  
   processMessageContent,

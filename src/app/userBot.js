@@ -10,6 +10,9 @@ const managementService = require('../services/management');
 const messageService = require('../services/message');
 const logger = require('../utils/logger');
 const cleanMessage = require('../utils/cleanMessage');
+const OpenAI = require('openai');
+
+const openai = new OpenAI({ apiKey: config.openaiApiKey });
 
 logger.info(`start of bot`);
 
@@ -19,7 +22,7 @@ logger.info(`start of bot`);
 
 
 // Middleware для сессий
-bot.use(session({ initial: () => ({ conversationId: null }) }));
+bot.use(session({ initial: () => ({ threadId: null }) }));
 
 async function startNewDialog(ctx, isNewProducer = false) {
   const userId = ctx.from.id;
@@ -31,7 +34,7 @@ async function startNewDialog(ctx, isNewProducer = false) {
       : 'Добро пожаловать, я твой AI-продюсер Лея! Чтобы начать общение, просто отправь сообщение';
     ctx.reply(message);
     await managementService.incrementNewDialogCount(userId);
-    await subscriptionService.setUserConversationId(userId, null);
+    await subscriptionService.setUserThreadId(userId, null);
   } else {
     ctx.reply('У тебя нет активной подписки. Пожалуйста, обнови твою подписку через @neuro_zen_helps');
   }

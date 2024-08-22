@@ -14,7 +14,7 @@ model User {
   subscriptionEnd DateTime?
   messageCount    Int       @default(0)
   newDialogCount  Int       @default(0)
-  conversationId  String?
+  threadId  String?
   userData        Json?    
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
