@@ -68,38 +68,39 @@ async function sendMessage(userId, message) {
   }
 }
 
-async function processResponse(response, conversationId) {
-  let assistantMessage = '';
-  let buffer = '';
 
-  for await (const chunk of response.data) {
-    buffer += chunk.toString();
-    let lines = buffer.split('\n');
-    buffer = lines.pop();
+// async function processResponse(response, threadId) {
+//   let assistantMessage = '';
+//   let buffer = '';
 
-    for (const line of lines) {
-      if (line.startsWith('data: ')) {
-        try {
-          const data = JSON.parse(line.slice(5));
-          if (data.message && data.message.content && data.message.content.parts) {
-            assistantMessage = data.message.content.parts[0];
-          }
-          if (!conversationId && data.conversation_id) {
-            conversationId = data.conversation_id;
-          }
-        } catch (error) {
-          logger.error('Error parsing JSON:', error.message);
-        }
-      }
-    }
-  }
+//   for await (const chunk of response.data) {
+//     buffer += chunk.toString();
+//     let lines = buffer.split('\n');
+//     buffer = lines.pop();
 
-  return { assistantMessage, newConversationId: conversationId };
-};
+//     for (const line of lines) {
+//       if (line.startsWith('data: ')) {
+//         try {
+//           const data = JSON.parse(line.slice(5));
+//           if (data.message && data.message.content && data.message.content.parts) {
+//             assistantMessage = data.message.content.parts[0];
+//           }
+//           if (!threadId && data.thread_id) {
+//             threadId = data.thread_id;
+//           }
+//         } catch (error) {
+//           logger.error('Error parsing JSON:', error.message);
+//         }
+//       }
+//     }
+//   }
+
+//   return { assistantMessage, newthreadId: threadId };
+// };
 
 
 module.exports = {  
   processMessageContent,
   sendMessage,
-  processResponse,
+  // processResponse,
 };

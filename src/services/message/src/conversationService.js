@@ -9,7 +9,7 @@ module.exports = {
   async resetConversation(userId) {
     await prisma.user.update({
       where: { userId: userId.toString() },
-      data: { conversationId: null }
+      data: { threadId: null }
     });
     await this.logConversation(userId, "System: Conversation reset", "System: Conversation reset");
   },

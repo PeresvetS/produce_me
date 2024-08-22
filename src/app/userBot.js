@@ -4,22 +4,20 @@ const { Bot, session } = require('grammy');
 const axios = require('axios');
 const fs = require('fs').promises;
 const path = require('path');
+const OpenAI = require('openai');
 const config = require('../config');
 const subscriptionService = require('../services/subscription');
 const managementService = require('../services/management');
 const messageService = require('../services/message');
 const logger = require('../utils/logger');
 const cleanMessage = require('../utils/cleanMessage');
-const OpenAI = require('openai');
-
-const openai = new OpenAI({ apiKey: config.openaiApiKey });
 
 logger.info(`start of bot`);
 
 const bot = new Bot(config.userBotToken);
+const openai = new OpenAI({ apiKey: config.openaiApiKey });
 
 logger.info(`start of bot`);
-
 
 // Middleware для сессий
 bot.use(session({ initial: () => ({ threadId: null }) }));
@@ -27,7 +25,8 @@ bot.use(session({ initial: () => ({ threadId: null }) }));
 async function startNewDialog(ctx, isNewProducer = false) {
   const userId = ctx.from.id;
   const username = ctx.from.username;
-  const subscriptionStatus = await subscriptionService.checkOrCreateUser(userId, username);
+  await managementService.checkOrCreateUser(userId, username);
+  const subscriptionStatus = await subscriptionService.checkSubscription(userId);
   if (subscriptionStatus) {
     let message = isNewProducer 
       ? 'Начинаем новый диалог с AI-продюсером! Чем я могу тебе помочь?'
@@ -37,6 +36,7 @@ async function startNewDialog(ctx, isNewProducer = false) {
     await subscriptionService.setUserThreadId(userId, null);
   } else {
     ctx.reply('У тебя нет активной подписки. Пожалуйста, обнови твою подписку через @neuro_zen_helps');
+    return;
   }
 }
 
@@ -64,9 +64,9 @@ bot.on('message:text', async (ctx) => {
 
     await ctx.replyWithChatAction('typing');
 
-    logger.info(`Sending message to GoAPI for user ${userId}`);
+    logger.info(`Sending message to OpenAI for user ${userId}`);
     let response = await messageService.sendMessage(userId, message);
-    logger.info(`Received response from GoAPI for user ${userId}: ${response}`);
+    logger.info(`Received response from OpenAI for user ${userId}: ${response}`);
     
     await subscriptionService.logMessage(userId);
     await managementService.incrementDialogCount(userId);
@@ -158,7 +158,6 @@ bot.on(['message:document', 'message:photo'], async (ctx) => {
 
     await ctx.reply('Минуту, обрабатываю файл');
   
-
     const fileId = file.file_id;
     const fileInfo = await ctx.api.getFile(fileId);
     const fileUrl = `https://api.telegram.org/file/bot${config.userBotToken}/${fileInfo.file_path}`;
@@ -177,11 +176,34 @@ bot.on(['message:document', 'message:photo'], async (ctx) => {
 
     logger.info(`File saved: ${tempFilePath}`);
 
-    const uploadedFile = await messageService.uploadFile(userId, tempFilePath);
-    logger.info(`File uploaded: ${JSON.stringify(uploadedFile)}`);
+    const uploadedFile = await openai.files.create({
+      file: fs.createReadStream(tempFilePath),
+      purpose: 'assistants',
+    });
 
-    const aiResponse = await messageService.sendMessageWithFile(userId, caption, uploadedFile);
-    logger.info(`AI Response received, length: ${aiResponse.length}`);
+    logger.info(`File uploaded to OpenAI: ${JSON.stringify(uploadedFile)}`);
+
+    const threadId = await subscriptionService.getUserThreadId(userId);
+    let thread;
+
+    if (!threadId) {
+      thread = await openai.beta.threads.create();
+      await subscriptionService.setUserThreadId(userId, thread.id);
+    } else {
+      thread = { id: threadId };
+    }
+
+    await openai.beta.threads.messages.create(thread.id, {
+      role: "user",
+      content: caption,
+      file_ids: [uploadedFile.id]
+    });
+
+    const run = await openai.beta.threads.runs.create(thread.id, {
+      assistant_id: config.assistantId,
+    });
+
+    let aiResponse = await messageService.waitForRunCompletion(thread.id, run.id);
 
     await fs.unlink(tempFilePath);
 
@@ -203,12 +225,6 @@ bot.on(['message:document', 'message:photo'], async (ctx) => {
     logger.error('Error processing file:', error);
     await ctx.reply('Произошла ошибка при обработке файла. Пожалуйста, попробуйте еще раз.');
   }
-
-  
 });
-
-
-
-
 
 module.exports = bot;

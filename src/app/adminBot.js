@@ -44,7 +44,15 @@ adminBot.command('stats', async (ctx) => {
 
 adminBot.command('users', async (ctx) => {
   try {
-    const users = await subscriptionService.getAllUsers();
+    const inputText = ctx.message.text;
+    let limit = parseInt(inputText.match(/\d{1,4}$/));
+    logger.info(`123 ${limit}`);
+    if (isNaN(limit)) {
+      await ctx.reply('Использование: /users 10 - получить список пользователей c лимитом в 10 человек');
+      return;
+    } 
+    logger.info(`222 ${limit}`);
+    const users = await managementService.getAllUsers(limit);
     let message = 'Список пользователей:\n\n';
     users.forEach(user => {
       const subscriptionStatus = user.subscriptionEnd ? `Подписка до ${user.subscriptionEnd}` : 'Нет активной подписки';
@@ -82,6 +90,7 @@ adminBot.command('addsubscription', async (ctx) => {
   }
 
   try {
+
     const result = await subscriptionService.addSubscription(username.replace('@', ''), months);
     logger.info(`Subscription added successfully: ${result}`);
     await ctx.reply(result);

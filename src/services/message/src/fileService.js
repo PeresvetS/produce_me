@@ -16,15 +16,15 @@ module.exports = {
   async uploadFile(userId, filePath) {
     logger.info(`Uploading file for user ${userId} to GoAPI`);
     try {
-      const conversationId = await subscriptionService.getUserConversationId(userId);
-      const url = `${config.goapiUrl}/conversation/${conversationId}/file`;
+      // const conversationId = await subscriptionService.getUserConversationId(userId);
+      // const url = `${config.goapiUrl}/conversation/${conversationId}/file`;
 
-      const fileMetadata = await this.getFileMetadata(filePath);
-      const formData = new FormData();
-      formData.append('file', await fs.readFile(filePath), {
-        filename: path.basename(filePath),
-        contentType: fileMetadata.mimeType
-      });
+      // const fileMetadata = await this.getFileMetadata(filePath);
+      // const formData = new FormData();
+      // formData.append('file', await fs.readFile(filePath), {
+      //   filename: path.basename(filePath),
+      //   contentType: fileMetadata.mimeType
+      // });
 
       const response = await axios.post(url, formData, {
         headers: {
@@ -49,36 +49,36 @@ module.exports = {
   async sendMessageWithFile(userId, message, fileData) {
     logger.info(`Sending message with file for user ${userId} to GoAPI`);
     try {
-      const conversationId = await subscriptionService.getUserConversationId(userId);
-      const url = `${config.goapiUrl}/conversation/${conversationId}`;
+      // const conversationId = await subscriptionService.getUserConversationId(userId);
+      // const url = `${config.goapiUrl}/conversation/${conversationId}`;
 
-      const payload = {
-        model: 'gpt-4o',
-        content: {
-          content_type: "multimodal_text",
-          parts: [
-            {
-              asset_pointer: `file-service://${fileData.file_id}`,
-              size_bytes: fileData.size,
-              width: fileData.width,
-              height: fileData.height
-            },
-            message
-          ]
-        },
-        metadata: {
-          attachments: [
-            {
-              name: fileData.file_name,
-              id: fileData.file_id,
-              size: fileData.size,
-              mimeType: fileData.mimeType,
-              width: fileData.width,
-              height: fileData.height
-            }
-          ]
-        }
-      };
+      // const payload = {
+      //   model: 'gpt-4o',
+      //   content: {
+      //     content_type: "multimodal_text",
+      //     parts: [
+      //       {
+      //         asset_pointer: `file-service://${fileData.file_id}`,
+      //         size_bytes: fileData.size,
+      //         width: fileData.width,
+      //         height: fileData.height
+      //       },
+      //       message
+      //     ]
+      //   },
+      //   metadata: {
+      //     attachments: [
+      //       {
+      //         name: fileData.file_name,
+      //         id: fileData.file_id,
+      //         size: fileData.size,
+      //         mimeType: fileData.mimeType,
+      //         width: fileData.width,
+      //         height: fileData.height
+      //       }
+      //     ]
+      //   }
+      // };
 
       const response = await axios.post(url, payload, {
         headers: {
@@ -98,8 +98,8 @@ module.exports = {
   async downloadFile(userId, fileId) {
     logger.info(`Downloading file for user ${userId} from GoAPI`);
     try {
-      const conversationId = await subscriptionService.getUserConversationId(userId);
-      const url = `${config.goapiUrl}/conversation/${conversationId}/download`;
+      // const conversationId = await subscriptionService.getUserthreadId(userId);
+      // const url = `${config.goapiUrl}/conversation/${conversationId}/download`;
 
       const response = await axios.post(url, { file_id: fileId }, {
         headers: {
