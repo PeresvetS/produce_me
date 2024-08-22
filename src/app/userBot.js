@@ -2,20 +2,19 @@
 
 const { Bot, session } = require('grammy');
 const axios = require('axios');
-const fs = require('fs').promises;
+const fs = require('fs');
 const path = require('path');
-const OpenAI = require('openai');
 const config = require('../config');
 const subscriptionService = require('../services/subscription');
 const managementService = require('../services/management');
 const messageService = require('../services/message');
+const fileService = require('../services/message/src/fileService');
 const logger = require('../utils/logger');
-const cleanMessage = require('../utils/cleanMessage');
+const { cleanMessage, escapeMarkdown } = require('../utils/messageUtils');
 
 logger.info(`start of bot`);
 
 const bot = new Bot(config.userBotToken);
-const openai = new OpenAI({ apiKey: config.openaiApiKey });
 
 logger.info(`start of bot`);
 
@@ -29,9 +28,9 @@ async function startNewDialog(ctx, isNewProducer = false) {
   const subscriptionStatus = await subscriptionService.checkSubscription(userId);
   if (subscriptionStatus) {
     let message = isNewProducer 
-      ? 'Начинаем новый диалог с AI-продюсером! Чем я могу тебе помочь?'
-      : 'Добро пожаловать, я твой AI-продюсер Лея! Чтобы начать общение, просто отправь сообщение';
-    ctx.reply(message);
+      ? 'Начинаем новый диалог с AI\\-продюсером\\! Чем я могу тебе помочь?'
+      : 'Добро пожаловать, я твой AI\\-продюсер Лея\\! Чтобы начать общение, просто отправь сообщение';
+    ctx.reply(message, { parse_mode: 'MarkdownV2' });
     await managementService.incrementNewDialogCount(userId);
     await subscriptionService.setUserThreadId(userId, null);
   } else {
@@ -72,12 +71,14 @@ bot.on('message:text', async (ctx) => {
     await managementService.incrementDialogCount(userId);
 
     const maxLength = 4096;
-    if (response.length <= maxLength) {
-      await ctx.reply(response, { parse_mode: 'HTML' });
+    const cleanResponse = cleanMessage(response);
+    const escapedResponse = escapeMarkdown(cleanResponse).trim();
+    if (escapedResponse.length <= maxLength) {
+      await ctx.reply(escapedResponse, { parse_mode: 'MarkdownV2' });
     } else {
-      const parts = response.match(new RegExp(`.{1,${maxLength}}`, 'g'));
+      const parts = escapedResponse.match(new RegExp(`.{1,${maxLength}}`, 'g'));
       for (const part of parts) {
-        await ctx.reply(part, { parse_mode: 'HTML' });
+        await ctx.reply(part, { parse_mode: 'MarkdownV2' });
       }
     }
   } catch (error) {
@@ -127,7 +128,9 @@ bot.on('message:voice', async (ctx) => {
     await subscriptionService.logMessage(userId);
     await managementService.incrementDialogCount(userId);
 
-    await ctx.reply(aiResponse);
+    const cleanResponse = cleanMessage(aiResponse);
+    const escapedResponse = escapeMarkdown(cleanResponse);
+    await ctx.reply(escapedResponse, { parse_mode: 'MarkdownV2' });
   } catch (error) {
     logger.error('Error processing voice message:', error);
     await ctx.reply('Произошла ошибка при обработке голосового сообщения. Пожалуйста, попробуйте еще раз.');
@@ -146,79 +149,25 @@ bot.on(['message:document', 'message:photo'], async (ctx) => {
 
     await ctx.replyWithChatAction('typing');
 
-    let file;
-    let caption;
-    if (ctx.message.document) {
-      file = ctx.message.document;
-      caption = ctx.message.caption || 'Проанализируй этот документ';
-    } else if (ctx.message.photo) {
-      file = ctx.message.photo[ctx.message.photo.length - 1]; 
-      caption = ctx.message.caption || 'Опиши это изображение';
+    const { aiResponse, usage } = await fileService.processFile(ctx, userId);
+
+    // Логируем использование токенов
+    if (usage && usage.total_tokens) {
+      logger.info(`File analysis for user ${userId} used ${usage.total_tokens} tokens`);
+      const totalTokens = await subscriptionService.getTotalTokensUsed(userId);
+      logger.info(`Total tokens used by user ${userId}: ${totalTokens}`);
     }
-
-    await ctx.reply('Минуту, обрабатываю файл');
-  
-    const fileId = file.file_id;
-    const fileInfo = await ctx.api.getFile(fileId);
-    const fileUrl = `https://api.telegram.org/file/bot${config.userBotToken}/${fileInfo.file_path}`;
-    
-    const response = await axios({
-      method: 'get',
-      url: fileUrl,
-      responseType: 'arraybuffer'
-    });
-
-    const tempDir = path.join(__dirname, '../../temp');
-    await fs.mkdir(tempDir, { recursive: true });
-
-    const tempFilePath = path.join(tempDir, `file_${userId}_${Date.now()}${path.extname(fileInfo.file_path)}`);
-    await fs.writeFile(tempFilePath, response.data);
-
-    logger.info(`File saved: ${tempFilePath}`);
-
-    const uploadedFile = await openai.files.create({
-      file: fs.createReadStream(tempFilePath),
-      purpose: 'assistants',
-    });
-
-    logger.info(`File uploaded to OpenAI: ${JSON.stringify(uploadedFile)}`);
-
-    const threadId = await subscriptionService.getUserThreadId(userId);
-    let thread;
-
-    if (!threadId) {
-      thread = await openai.beta.threads.create();
-      await subscriptionService.setUserThreadId(userId, thread.id);
-    } else {
-      thread = { id: threadId };
-    }
-
-    await openai.beta.threads.messages.create(thread.id, {
-      role: "user",
-      content: caption,
-      file_ids: [uploadedFile.id]
-    });
-
-    const run = await openai.beta.threads.runs.create(thread.id, {
-      assistant_id: config.assistantId,
-    });
-
-    let aiResponse = await messageService.waitForRunCompletion(thread.id, run.id);
-
-    await fs.unlink(tempFilePath);
-
-    await subscriptionService.logMessage(userId);
-    await managementService.incrementDialogCount(userId);
 
     // Отправляем ответ пользователю
     const maxLength = 4096;
     const cleanResponse = cleanMessage(aiResponse).trim();
-    if (cleanResponse.length <= maxLength) {
-      await ctx.reply(cleanResponse, { parse_mode: 'HTML' });
+    const escapedResponse = escapeMarkdown(cleanResponse);
+    if (escapedResponse.length <= maxLength) {
+      await ctx.reply(escapedResponse, { parse_mode: 'MarkdownV2' });
     } else {
-      const parts = cleanResponse.match(new RegExp(`.{1,${maxLength}}`, 'g'));
+      const parts = escapedResponse.match(new RegExp(`.{1,${maxLength}}`, 'g'));
       for (const part of parts) {
-        await ctx.reply(part, { parse_mode: 'HTML' });
+        await ctx.reply(part, { parse_mode: 'MarkdownV2' });
       }
     }
   } catch (error) {

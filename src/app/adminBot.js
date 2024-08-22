@@ -4,6 +4,7 @@ const { Bot, session } = require('grammy');
 const config = require('../config');
 const subscriptionService = require('../services/subscription');
 const managementService = require('../services/management/');
+const messageService = require('../services/message/');
 const logger = require('../utils/logger');
 
 logger.info(`start of bot`);
@@ -56,7 +57,7 @@ adminBot.command('users', async (ctx) => {
     let message = 'Список пользователей:\n\n';
     users.forEach(user => {
       const subscriptionStatus = user.subscriptionEnd ? `Подписка до ${user.subscriptionEnd}` : 'Нет активной подписки';
-      message += `ID: ${user.id}, Имя: ${user.name}, Username: @${user.username}, Диалогов: ${user.dialogCount}, ${subscriptionStatus}\n\n`;
+      message += `ID: ${user.id}, userId: ${user.userId}, Имя: ${user.name}, Username: @${user.username}, Диалогов: ${user.dialogCount}, Токенов: ${user.totalTokensUsed},  ${subscriptionStatus}\n\n`;
     });
     await ctx.reply(message);
   } catch (error) {
@@ -126,16 +127,24 @@ Username: ${user.username}
 });
 
 adminBot.command('getlog', async (ctx) => {
-  const userId = ctx.match;
-  if (!userId) {
+  const args = ctx.message.text.split(' ');
+  if (args.length !== 2) {
     await ctx.reply('Использование: /getlog userId');
     return;
   }
 
+  const userId = args[1];
+
   try {
-    const log = await goapiService.getConversationLog(userId);
-    if (log.length > 4096) {
-      await ctx.replyWithDocument(new InputFile(Buffer.from(log), `conversation_log_${userId}.txt`));
+    const log = await messageService.getConversationLog(userId);
+    if (log === 'Лог переписки для данного пользователя не найден.') {
+      await ctx.reply(log);
+    } else if (log.length > 4096) {
+      // Если лог слишком длинный для отправки в виде сообщения, отправляем его как файл
+      await ctx.replyWithDocument({
+        source: Buffer.from(log),
+        filename: `conversation_log_${userId}.txt`
+      });
     } else {
       await ctx.reply(log);
     }

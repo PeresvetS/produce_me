@@ -15,12 +15,24 @@ model User {
   messageCount    Int       @default(0)
   newDialogCount  Int       @default(0)
   threadId  String?
+  totalTokensUsed Int @default(0)
   userData        Json?    
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
+  conversations Conversation[]
 }
 
 model Admin {
   id     Int    @id @default(autoincrement())
   userId String @unique
+}
+
+model Conversation {
+  id                Int      @id @default(autoincrement())
+  userId            String
+  userMessage       String
+  assistantMessage  String
+  timestamp         DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [userId])
 }

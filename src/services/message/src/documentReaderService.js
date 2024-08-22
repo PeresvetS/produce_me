@@ -94,9 +94,12 @@ cleanSheetData(jsonData) {
 
       let content = `Содержимое документа по ссылке ${documentUrl}:\n\n`;
 
+      logger.info(`Продолжаем обработку...`);
+
       if (typeof documentContent === 'object') {
         // Обработка объекта (результат readGoogleDoc)
         const [sheetName, sheetData] = Object.entries(documentContent)[0]; // Берем только первый лист
+        logger.info(`Продолжаем обработку... 1`);
         content += `Вкладка "${sheetName}":\n`;
         if (Array.isArray(sheetData) && sheetData.length > 0) {
           const headers = Object.keys(sheetData[0]);
@@ -138,12 +141,14 @@ cleanSheetData(jsonData) {
         content += 'Неподдерживаемый формат данных\n';
       }
 
+      logger.info(`Продолжаем обработку... 2`);
+
       content += '\n';
       const originalUserText = originalMessage.replace(documentUrl, '').trim();
       if (originalUserText) {
         content += `Также мой запрос: ${originalUserText}\n\n`;
       }
-      content += `Пожалуйста, проанализируй этот документ, он важен для нашего диалога.`;
+      content += `ВАЖНО! Пожалуйста, проанализируй этот документ и дай креативный вывод по моему архетипу, позиционированию, сильным сторонам, Икигай, социотипу`;
       return content;
     } catch (error) {
       logger.error('Error reading document:', error);

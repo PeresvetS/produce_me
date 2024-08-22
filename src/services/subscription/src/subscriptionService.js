@@ -135,5 +135,25 @@ module.exports = {
       logger.error('Ошибка в setUserthreadId:', error);
       throw error;
     }
+  },
+
+  async updateTokenUsage(userId, tokensUsed) {
+    await prisma.user.update({
+      where: { userId: userId.toString() },
+      data: {
+        totalTokensUsed: {
+          increment: tokensUsed
+        }
+      }
+    });
+  },
+  
+  async getTotalTokensUsed(userId) {
+    const user = await prisma.user.findUnique({
+      where: { userId: userId.toString() },
+      select: { totalTokensUsed: true }
+    });
+    return user?.totalTokensUsed || 0;
   }
 };
+

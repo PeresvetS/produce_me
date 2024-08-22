@@ -1,176 +1,92 @@
 // src/services/message/src/fileService.js
 
-const axios = require('axios');
-const FormData = require('form-data');
-const fs = require('fs').promises;
+const fs = require('fs'); // Используем обычный fs для работы с потоками
+const fsp = require('fs').promises; // Используем fs.promises для работы с промисами
 const path = require('path');
+const axios = require('axios');
 const mime = require('mime-types');
 const sizeOf = require('image-size');
 const config = require('../../../config');
 const logger = require('../../../utils/logger');
-const subscriptionService = require('../../subscription');
 const groqService = require('../../groqService');
 const messageService = require('./messageService');
+const subscriptionService = require('../../subscription');
+const managementService = require('../../management');
+
+const OpenAI = require('openai');
+
+const openai = new OpenAI({ apiKey: config.openaiApiKey });
 
 module.exports = {
-  async uploadFile(userId, filePath) {
-    logger.info(`Uploading file for user ${userId} to GoAPI`);
-    try {
-      // const conversationId = await subscriptionService.getUserConversationId(userId);
-      // const url = `${config.goapiUrl}/conversation/${conversationId}/file`;
 
-      // const fileMetadata = await this.getFileMetadata(filePath);
-      // const formData = new FormData();
-      // formData.append('file', await fs.readFile(filePath), {
-      //   filename: path.basename(filePath),
-      //   contentType: fileMetadata.mimeType
-      // });
-
-      const response = await axios.post(url, formData, {
-        headers: {
-          ...formData.getHeaders(),
-          'X-API-Key': config.goapiKey,
-        },
-      });
-
-      logger.info(`File upload response received from GoAPI. Status: ${response.status}`);
-
-      if (response.data.code === 200) {
-        return { ...response.data.data, ...fileMetadata };
-      } else {
-        throw new Error(`File upload failed: ${response.data.message}`);
-      }
-    } catch (error) {
-      logger.error('Error uploading file to GoAPI:', error);
-      throw error;
+  async processFile(ctx, userId) {
+    let file;
+    let caption;
+    if (ctx.message.document) {
+      file = ctx.message.document;
+      caption = ctx.message.caption || 'Проанализируй этот документ';
+    } else if (ctx.message.photo) {
+      file = ctx.message.photo[ctx.message.photo.length - 1];
+      caption = ctx.message.caption || 'Опиши это изображение';
     }
-  },
 
-  async sendMessageWithFile(userId, message, fileData) {
-    logger.info(`Sending message with file for user ${userId} to GoAPI`);
-    try {
-      // const conversationId = await subscriptionService.getUserConversationId(userId);
-      // const url = `${config.goapiUrl}/conversation/${conversationId}`;
-
-      // const payload = {
-      //   model: 'gpt-4o',
-      //   content: {
-      //     content_type: "multimodal_text",
-      //     parts: [
-      //       {
-      //         asset_pointer: `file-service://${fileData.file_id}`,
-      //         size_bytes: fileData.size,
-      //         width: fileData.width,
-      //         height: fileData.height
-      //       },
-      //       message
-      //     ]
-      //   },
-      //   metadata: {
-      //     attachments: [
-      //       {
-      //         name: fileData.file_name,
-      //         id: fileData.file_id,
-      //         size: fileData.size,
-      //         mimeType: fileData.mimeType,
-      //         width: fileData.width,
-      //         height: fileData.height
-      //       }
-      //     ]
-      //   }
-      // };
-
-      const response = await axios.post(url, payload, {
-        headers: {
-          'X-API-Key': config.goapiKey,
-          'Content-Type': 'application/json'
-        },
-        responseType: 'stream'
-      });
-
-      return this.processStreamResponse(response);
-    } catch (error) {
-      logger.error('Error sending message with file to GoAPI:', error);
-      throw error;
-    }
-  },
-
-  async downloadFile(userId, fileId) {
-    logger.info(`Downloading file for user ${userId} from GoAPI`);
-    try {
-      // const conversationId = await subscriptionService.getUserthreadId(userId);
-      // const url = `${config.goapiUrl}/conversation/${conversationId}/download`;
-
-      const response = await axios.post(url, { file_id: fileId }, {
-        headers: {
-          'X-API-Key': config.goapiKey,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      logger.info(`File download response received from GoAPI. Status: ${response.status}`);
-
-      if (response.data.code === 200) {
-        return response.data.data;
-      } else {
-        throw new Error(`File download failed: ${response.data.message}`);
-      }
-    } catch (error) {
-      logger.error('Error downloading file from GoAPI:', error);
-      throw error;
-    }
-  },
-
-  async processStreamResponse(response) {
-    let assistantMessage = '';
-    let buffer = '';
-    let lastMessage = '';
+    await ctx.reply('Минуту, обрабатываю файл');
   
-    for await (const chunk of response.data) {
-      buffer += chunk.toString();
-      let lines = buffer.split('\n');
-      buffer = lines.pop();
+    const fileId = file.file_id;
+    const fileInfo = await ctx.api.getFile(fileId);
+    const fileUrl = `https://api.telegram.org/file/bot${config.userBotToken}/${fileInfo.file_path}`;
+    
+    const response = await axios({
+      method: 'get',
+      url: fileUrl,
+      responseType: 'arraybuffer'
+    });
+
+    const tempDir = path.join(__dirname, '../../../../temp');
+    await fsp.mkdir(tempDir, { recursive: true }); // Используем fs.promises.mkdir
+
+    const tempFilePath = path.join(tempDir, `file_${userId}_${Date.now()}${path.extname(fileInfo.file_path)}`);
+    await fsp.writeFile(tempFilePath, response.data); // Используем fs.promises.writeFile
+
+    logger.info(`File saved: ${tempFilePath}`);
+
+    const uploadedFile = await openai.files.create({
+      file: fs.createReadStream(tempFilePath), // Используем обычный fs для потоков
+      purpose: 'assistants',
+    });
+
+    logger.info(`File uploaded to OpenAI: ${JSON.stringify(uploadedFile)}`);
+
+    const threadId = await subscriptionService.getUserThreadId(userId);
+    let thread;
+
+    if (!threadId) {
+      thread = await openai.beta.threads.create();
+      await subscriptionService.setUserThreadId(userId, thread.id);
+    } else {
+      thread = { id: threadId };
+    }
+
+    const run = await openai.beta.threads.runs.create(thread.id, {
+      assistant_id: config.assistantId,
+    });
   
-      for (const line of lines) {
-        if (line.startsWith('data: ')) {
-          try {
-            const jsonString = line.slice(5).trim();
-            if (jsonString === '[DONE]') {
-              continue;
-            }
-            const data = JSON.parse(jsonString);
-            if (data.message && data.message.content && data.message.content.parts) {
-              const newPart = data.message.content.parts[0];
-              if (newPart.length > lastMessage.length) {
-                assistantMessage = newPart;
-                lastMessage = newPart;
-              }
-            }
-          } catch (error) {
-            logger.warn(`Error parsing JSON: ${error.message}`);
-            logger.warn(`Problematic line: ${line}`);
-          }
-        }
-      }
+    const { message: aiResponse, usage } = await messageService.waitForRunCompletion(thread.id, run.id);
+  
+    await fsp.unlink(tempFilePath); // Используем fs.promises.unlink
+  
+    await subscriptionService.logMessage(userId);
+    await managementService.incrementDialogCount(userId);
+  
+    // Обновляем использование токенов
+    if (usage && usage.total_tokens) {
+      await subscriptionService.updateTokenUsage(userId, usage.total_tokens);
+      logger.info(`Updated token usage for user ${userId}: +${usage.total_tokens} tokens`);
     }
   
-    // Обработка оставшегося буфера
-    if (buffer) {
-      try {
-        const data = JSON.parse(buffer);
-        if (data.message && data.message.content && data.message.content.parts) {
-          const newPart = data.message.content.parts[0];
-          if (newPart.length > lastMessage.length) {
-            assistantMessage = newPart;
-          }
-        }
-      } catch (error) {
-        logger.warn(`Error parsing remaining buffer: ${error.message}`);
-      }
-    }
-  
-    return assistantMessage.trim();
+    return { aiResponse, usage };
   },
+
 
   async processVoiceMessage(userId, filePath) {
     try {
@@ -192,14 +108,14 @@ module.exports = {
   },
 
   async getFileMetadata(filePath) {
-    const stats = await fs.stat(filePath);
+    const stats = await fsp.stat(filePath); // Используем fs.promises.stat
     const mimeType = mime.lookup(filePath) || 'application/octet-stream';
     let width = 0;
     let height = 0;
 
     if (mimeType.startsWith('image/')) {
       try {
-        const dimensions = sizeOf(await fs.readFile(filePath));
+        const dimensions = sizeOf(await fsp.readFile(filePath)); // Используем fs.promises.readFile
         width = dimensions.width;
         height = dimensions.height;
       } catch (error) {
@@ -227,6 +143,5 @@ module.exports = {
     ];
     return validMimeTypes.includes(mimeType);
   }
-
 
 };
