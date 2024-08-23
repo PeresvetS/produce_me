@@ -96,7 +96,7 @@ async function sendMessage(userId, message, retryCount = 3) {
   try {
     let threadId = await subscriptionService.getUserThreadId(userId);
     const content = await processMessageContent(userId, message);
-    const systemPrompt = await promptSelectionService.selectPrompt(userId, content);
+    // const systemPrompt = await promptSelectionService.selectPrompt(userId, content);
 
     if (!threadId) {
       const thread = await openai.beta.threads.create();
@@ -114,7 +114,7 @@ async function sendMessage(userId, message, retryCount = 3) {
 
     const run = await openai.beta.threads.runs.create(threadId, {
       assistant_id: config.assistantId,
-      instructions: systemPrompt
+      // instructions: systemPrompt
     });
 
     const { message: assistantMessage, usage } = await waitForRunCompletion(threadId, run.id);
