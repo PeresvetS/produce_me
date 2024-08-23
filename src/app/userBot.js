@@ -3,6 +3,7 @@
 const { Bot, session } = require('grammy');
 const axios = require('axios');
 const fs = require('fs');
+const fsp = require('fs').promises;
 const path = require('path');
 const config = require('../config');
 const subscriptionService = require('../services/subscription');
@@ -11,6 +12,7 @@ const messageService = require('../services/message');
 const fileService = require('../services/message/src/fileService');
 const logger = require('../utils/logger');
 const { cleanMessage, escapeMarkdown } = require('../utils/messageUtils');
+const tempDir = process.env.TEMP_DIR || path.join(__dirname, '../../temp');
 
 logger.info(`start of bot`);
 
@@ -110,7 +112,8 @@ bot.on('message:voice', async (ctx) => {
       responseType: 'stream'
     });
 
-    const tempFilePath = path.join(__dirname, '../../temp', `voice_${userId}_${Date.now()}.ogg`);
+    const tempFilePath = path.join(tempDir, `voice_${userId}_${Date.now()}.ogg`);
+    
     const writer = fs.createWriteStream(tempFilePath);
     response.data.pipe(writer);
 
@@ -119,11 +122,16 @@ bot.on('message:voice', async (ctx) => {
       writer.on('error', reject);
     });
 
+    // Проверяем, существует ли файл перед обработкой
+        // Проверяем, существует ли файл перед обработкой
+        logger.info(`Temporary file path: ${tempFilePath}`);
+        logger.info(`File exists before processing: ${await fsp.access(tempFilePath).then(() => 'Yes', () => 'No')}`)
+
     const aiResponse = await messageService.processVoiceMessage(userId, tempFilePath);
 
-    fs.unlink(tempFilePath, (err) => {
-      if (err) logger.error('Error deleting temp file:', err);
-    });
+    // Используем fs.promises для асинхронного удаления файла
+    await fsp.unlink(tempFilePath).catch(err => logger.warn(`Failed to delete temp file: ${err}`));
+
 
     await subscriptionService.logMessage(userId);
     await managementService.incrementDialogCount(userId);

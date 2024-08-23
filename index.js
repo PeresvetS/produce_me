@@ -6,6 +6,8 @@ const { Bot } = require('grammy');
 const logger = require('./src/utils/logger');
 const config = require('./src/config');
 const http = require('http');
+const fs = require('fs').promises;
+const path = require('path');
 
 const server = http.createServer((req, res) => {
   res.writeHead(200, { 'Content-Type': 'text/plain' });
@@ -71,6 +73,18 @@ async function startBots() {
     process.exit(1);
   }
 }
+
+async function ensureTempDir() {
+  const tempDir = process.env.TEMP_DIR || path.join(__dirname, 'temp');
+  try {
+    await fs.mkdir(tempDir, { recursive: true });
+    console.log(`Temporary directory ensured at ${tempDir}`);
+  } catch (error) {
+    console.error(`Error creating temp directory: ${error}`);
+  }
+}
+
+ensureTempDir();
 
 console.log('Calling startBots function');
 startBots().then(() => {
