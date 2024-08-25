@@ -20,6 +20,9 @@ async function checkUserByUsername(username) {
 async function checkUser(userId, username) {
   logger.info(`Checking user: ${username}`);
   const user = await checkUserByUsername(username);
+  if (user === null) {
+    return false;
+  }
   const currentUserId = user.userId;
   if (currentUserId.startsWith('temp')) {
     await updateUserID(userId, username);
