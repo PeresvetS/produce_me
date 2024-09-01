@@ -28,7 +28,6 @@ async function startNewDialog(ctx) {
   if (subscriptionStatus) {
     ctx.reply('Привет! Я Марк, твой AI-маркетолог. Я помогу тебе создать разобраться с маркетинговыми аспектами твоего проекта. Расскажи мне о себе и о своей идее');
     await managementService.incrementNewDialogCount(userId);
-    // await subscriptionService.setUserThreadId(userId, 'MARKETER', null);
   } else {
     ctx.reply('У тебя нет активной подписки. Пожалуйста, обнови твою подписку через @neuro_zen_helps');
   }
