@@ -11,9 +11,6 @@ ALTER TABLE "Conversation" ADD COLUMN IF NOT EXISTS "botType" "BotType";
 -- Update existing conversations
 UPDATE "Conversation" SET "botType" = 'PRODUCER' WHERE "botType" IS NULL;
 
--- Make botType NOT NULL after updating existing rows
-ALTER TABLE "Conversation" ALTER COLUMN "botType" SET NOT NULL;
-
 -- CreateTable
 CREATE TABLE IF NOT EXISTS "BotThread" (
     "id" SERIAL NOT NULL,

@@ -7,9 +7,6 @@
 -- CreateEnum
 CREATE TYPE "BotType" AS ENUM ('PRODUCER', 'MARKETER', 'CUSDEV');
 
--- AlterTable
-ALTER TABLE "Conversation" ADD COLUMN     "botType" "BotType" NOT NULL;
-
 -- CreateTable
 CREATE TABLE "BotThread" (
     "id" SERIAL NOT NULL,
