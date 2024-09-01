@@ -31,7 +31,7 @@ model Admin {
 model Conversation {
   id               Int      @id @default(autoincrement())
   userId           String
-  botType          BotType
+  botType          BotType?
   userMessage      String
   assistantMessage String
   timestamp        DateTime @default(now())
@@ -42,7 +42,7 @@ model BotThread {
   id       Int     @id @default(autoincrement())
   userId   String
   botType  BotType
-  threadId String?  // Добавляем ? чтобы разрешить null значения
+  threadId String?
   user     User    @relation(fields: [userId], references: [userId])
 
   @@unique([userId, botType])
