@@ -4,6 +4,22 @@ const winston = require('winston');
 const { combine, timestamp, printf, errors, splat } = winston.format;
 require('winston-daily-rotate-file');
 
+const safeStringify = (obj) => {
+  const cache = new Set();
+  return JSON.stringify(obj, (key, value) => {
+    if (typeof value === 'object' && value !== null) {
+      if (cache.has(value)) {
+        return '[Circular]';
+      }
+      cache.add(value);
+    }
+    if (typeof value === 'bigint') {
+      return value.toString() + 'n';
+    }
+    return value;
+  }, 2);
+};
+
 
 // Создаем кастомный формат для логов
 const myFormat = printf(({ level, message, timestamp, ...metadata }) => {
