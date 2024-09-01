@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS "BotThread" (
     "id" SERIAL NOT NULL,
     "userId" TEXT NOT NULL,
     "botType" "BotType" NOT NULL,
-    "threadId" TEXT NOT NULL,
+    "threadId" TEXT,
     PRIMARY KEY ("id")
 );
 

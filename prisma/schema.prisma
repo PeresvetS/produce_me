@@ -31,7 +31,7 @@ model Admin {
 model Conversation {
   id               Int      @id @default(autoincrement())
   userId           String
-  botType          BotType?
+  botType          BotType? 
   userMessage      String
   assistantMessage String
   timestamp        DateTime @default(now())
