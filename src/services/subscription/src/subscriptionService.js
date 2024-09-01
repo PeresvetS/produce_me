@@ -159,7 +159,6 @@ module.exports = {
           threadId: threadId // Обновляем threadId, даже если он null
         },
         create: {
-          userId: userId.toString(),
           botType: botType,
           threadId: threadId, // Может быть null при создании
           user: {
