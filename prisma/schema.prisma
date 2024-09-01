@@ -42,7 +42,7 @@ model BotThread {
   id       Int     @id @default(autoincrement())
   userId   String
   botType  BotType
-  threadId String
+  threadId String?  // Добавляем ? чтобы разрешить null значения
   user     User    @relation(fields: [userId], references: [userId])
 
   @@unique([userId, botType])

@@ -147,7 +147,7 @@ module.exports = {
         throw new Error(`User with ID ${userId} not found`);
       }
   
-      // Теперь обновляем или создаем запись в BotThread
+      // Используем upsert для создания или обновления записи
       await prisma.botThread.upsert({
         where: {
           userId_botType: {
@@ -155,24 +155,25 @@ module.exports = {
             botType: botType
           }
         },
-        update: { 
-          threadId: threadId 
+        update: {
+          threadId: threadId // Обновляем threadId, даже если он null
         },
         create: {
+          userId: userId.toString(),
           botType: botType,
-          threadId: threadId,
+          threadId: threadId, // Может быть null при создании
           user: {
             connect: { userId: userId.toString() }
           }
         }
       });
   
-      logger.info(`Successfully set thread ID for user ${userId} and bot type ${botType}`);
+      logger.info(`Successfully set thread ID for user ${userId} and bot type ${botType}. ThreadId: ${threadId || 'null'}`);
     } catch (error) {
       logger.error(`Error setting thread ID for user ${userId} and bot type ${botType}:`, error);
       throw error;
     }
-  },
+  }
 
 
   async getTotalTokensUsed(userId) {
