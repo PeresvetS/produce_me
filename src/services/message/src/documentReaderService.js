@@ -82,7 +82,7 @@ cleanSheetData(jsonData) {
     }
   },
 
-  async processDocumentUrl(documentUrl, originalMessage) {
+  async processDocumentUrl(documentUrl, originalMessage, botType) {
     try {
       const documentContent = await this.readDocument(documentUrl);
       logger.info(`Тип полученных данных: ${typeof documentContent}`);
@@ -148,7 +148,10 @@ cleanSheetData(jsonData) {
       if (originalUserText) {
         content += `Также мой запрос: ${originalUserText}\n\n`;
       }
-      content += `ВАЖНО! Пожалуйста, проанализируй этот документ и дай креативный вывод по моему архетипу, позиционированию, сильным сторонам, Икигай, социотипу`;
+      if (botType === 'PRODUCER') { 
+        logger.info(`Продолжаем обработку... 3`);
+        content += `ВАЖНО! Пожалуйста, проанализируй этот документ и дай креативный вывод по моему архетипу, позиционированию, сильным сторонам, Икигай, социотипу`;
+      }
       return content;
     } catch (error) {
       logger.error('Error reading document:', error);

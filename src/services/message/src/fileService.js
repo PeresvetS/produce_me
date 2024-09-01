@@ -1,7 +1,7 @@
 // src/services/message/src/fileService.js
 
-const fs = require('fs'); // Используем обычный fs для работы с потоками
-const fsp = require('fs').promises; // Используем fs.promises для работы с промисами
+const fs = require('fs');
+const fsp = require('fs').promises;
 const path = require('path');
 const axios = require('axios');
 const mime = require('mime-types');
@@ -18,8 +18,7 @@ const OpenAI = require('openai');
 const openai = new OpenAI({ apiKey: config.openaiApiKey });
 
 module.exports = {
-
-  async processFile(ctx, userId) {
+  async processFile(ctx, userId, botType) {
     let file;
     let caption;
     if (ctx.message.document) {
@@ -34,7 +33,8 @@ module.exports = {
   
     const fileId = file.file_id;
     const fileInfo = await ctx.api.getFile(fileId);
-    const fileUrl = `https://api.telegram.org/file/bot${config.userBotToken}/${fileInfo.file_path}`;
+    const botToken = config[`${botType.toLowerCase()}BotToken`];
+    const fileUrl = `https://api.telegram.org/file/bot${botToken}/${fileInfo.file_path}`;
     
     const response = await axios({
       method: 'get',
@@ -43,42 +43,41 @@ module.exports = {
     });
 
     const tempDir = path.join(__dirname, '../../../../temp');
-    await fsp.mkdir(tempDir, { recursive: true }); // Используем fs.promises.mkdir
+    await fsp.mkdir(tempDir, { recursive: true });
 
     const tempFilePath = path.join(tempDir, `file_${userId}_${Date.now()}${path.extname(fileInfo.file_path)}`);
-    await fsp.writeFile(tempFilePath, response.data); // Используем fs.promises.writeFile
+    await fsp.writeFile(tempFilePath, response.data);
 
     logger.info(`File saved: ${tempFilePath}`);
 
     const uploadedFile = await openai.files.create({
-      file: fs.createReadStream(tempFilePath), // Используем обычный fs для потоков
+      file: fs.createReadStream(tempFilePath),
       purpose: 'assistants',
     });
 
     logger.info(`File uploaded to OpenAI: ${JSON.stringify(uploadedFile)}`);
 
-    const threadId = await subscriptionService.getUserThreadId(userId);
+    const threadId = await subscriptionService.getUserThreadId(userId, botType);
     let thread;
 
     if (!threadId) {
       thread = await openai.beta.threads.create();
-      await subscriptionService.setUserThreadId(userId, thread.id);
+      await subscriptionService.setUserThreadId(userId, botType, thread.id);
     } else {
       thread = { id: threadId };
     }
 
     const run = await openai.beta.threads.runs.create(thread.id, {
-      assistant_id: config.assistantId,
+      assistant_id: config.assistantIds[botType],
     });
   
     const { message: aiResponse, usage } = await messageService.waitForRunCompletion(thread.id, run.id);
   
-    await fsp.unlink(tempFilePath); // Используем fs.promises.unlink
+    await fsp.unlink(tempFilePath);
   
-    await subscriptionService.logMessage(userId);
+    await subscriptionService.logMessage(userId, botType);
     await managementService.incrementDialogCount(userId);
   
-    // Обновляем использование токенов
     if (usage && usage.total_tokens) {
       await subscriptionService.updateTokenUsage(userId, usage.total_tokens);
       logger.info(`Updated token usage for user ${userId}: +${usage.total_tokens} tokens`);
@@ -87,12 +86,11 @@ module.exports = {
     return { aiResponse, usage };
   },
 
-
-  async processVoiceMessage(userId, filePath) {
+  async processVoiceMessage(userId, filePath, botType) {
     try {
       const transcribedText = await groqService.transcribeAudio(filePath);
       logger.info(`Voice message transcribed successfully for user ${userId}`);
-      return messageService.sendMessage(userId, transcribedText);
+      return messageService.sendMessage(userId, transcribedText, botType);
     } catch (error) {
       logger.error(`Error processing voice message for user ${userId}:`, error);
       throw error;
@@ -108,14 +106,14 @@ module.exports = {
   },
 
   async getFileMetadata(filePath) {
-    const stats = await fsp.stat(filePath); // Используем fs.promises.stat
+    const stats = await fsp.stat(filePath);
     const mimeType = mime.lookup(filePath) || 'application/octet-stream';
     let width = 0;
     let height = 0;
 
     if (mimeType.startsWith('image/')) {
       try {
-        const dimensions = sizeOf(await fsp.readFile(filePath)); // Используем fs.promises.readFile
+        const dimensions = sizeOf(await fsp.readFile(filePath));
         width = dimensions.width;
         height = dimensions.height;
       } catch (error) {
@@ -143,5 +141,4 @@ module.exports = {
     ];
     return validMimeTypes.includes(mimeType);
   }
-
 };

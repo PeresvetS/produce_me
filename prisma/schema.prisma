@@ -1,25 +1,26 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-generator client {
-  provider = "prisma-client-js"
-}
-
 model User {
-  id              Int       @id @default(autoincrement())
-  userId          String    @unique
-  username        String    @unique
+  id              Int            @id @default(autoincrement())
+  userId          String         @unique
+  username        String         @unique
   subscriptionEnd DateTime?
-  messageCount    Int       @default(0)
-  newDialogCount  Int       @default(0)
-  threadId  String?
-  totalTokensUsed Int @default(0)
-  userData        Json?    
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  conversations Conversation[]
+  messageCount    Int            @default(0)
+  newDialogCount  Int            @default(0)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  userData        Json?
+  threadId        String?        // Оставляем для обратной совместимости
+  totalTokensUsed Int            @default(0)
+  conversations   Conversation[]
+  botThreads      BotThread[]
 }
 
 model Admin {
@@ -28,11 +29,27 @@ model Admin {
 }
 
 model Conversation {
-  id                Int      @id @default(autoincrement())
-  userId            String
-  userMessage       String
-  assistantMessage  String
-  timestamp         DateTime @default(now())
+  id               Int      @id @default(autoincrement())
+  userId           String
+  botType          BotType
+  userMessage      String
+  assistantMessage String
+  timestamp        DateTime @default(now())
+  user             User     @relation(fields: [userId], references: [userId])
+}
 
-  user User @relation(fields: [userId], references: [userId])
+model BotThread {
+  id       Int     @id @default(autoincrement())
+  userId   String
+  botType  BotType
+  threadId String
+  user     User    @relation(fields: [userId], references: [userId])
+
+  @@unique([userId, botType])
+}
+
+enum BotType {
+  PRODUCER
+  MARKETER
+  CUSDEV
 }

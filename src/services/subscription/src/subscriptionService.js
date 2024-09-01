@@ -1,10 +1,10 @@
-// src/services/subscriptionService.js
+// src/services/subscription/src/subscriptionService.js
 
-const prisma = require('../../../db/prisma');
 const moment = require('moment');
+const prisma = require('../../../db/prisma');
 const logger = require('../../../utils/logger');
-const subscriptionCacheService = require('./subscriptionCacheService');
 const managementService = require('../../management/');
+const subscriptionCacheService = require('./subscriptionCacheService');
 
 module.exports = {
 
@@ -38,7 +38,9 @@ module.exports = {
       }
       logger.info(`Checking subscription in database for user DATE: ${user.subscriptionEnd}`);
       const status = user.subscriptionEnd && moment(user.subscriptionEnd).isAfter(moment());
-      await subscriptionCacheService.setCachedSubscription(userId, status);
+      if (status === true) {
+        await subscriptionCacheService.setCachedSubscription(userId, status);
+      }
       
       logger.info(`Subscription status for user ${userId}: ${status}`);
       return status;
@@ -51,21 +53,23 @@ module.exports = {
   async addSubscription(username, months) {
     logger.info(`Adding subscription for user: ${username}, months: ${months}`);
     try {
-      let user = managementService.checkOrCreateUserByUsername(username);
-      let currentEnd = 0;
-      if(user) {
-        currentEnd = user.subscriptionEnd;
+      let user = await managementService.checkUserByUsername(username);
+      if (!user) {
+        logger.info(`User ${username} not found. Creating new user.`);
+        user = await managementService.createUserByUsername(username);
       }
+  
+      let currentEnd = user.subscriptionEnd;
       
       const newEnd = currentEnd && moment(currentEnd).isAfter(moment())
         ? moment(currentEnd).add(months, 'months')
         : moment().add(months, 'months');
-
-      await prisma.user.update({
+  
+      user = await prisma.user.update({
         where: { username: username },
         data: { subscriptionEnd: newEnd.toDate() }
       });
-
+  
       logger.info(`Subscription added for user ${username} until ${newEnd.format('DD.MM.YYYY')}`);
       return `Подписка для пользователя @${username} успешно добавлена до ${newEnd.format('DD.MM.YYYY')}`;
     } catch (error) {
@@ -100,60 +104,101 @@ module.exports = {
   },
 
 
-  async getUserThreadId(userId) { 
-    logger.info(`Getting conversation ID for user: ${userId}`);
+  async getUserThreadId(userId, botType) {
     try {
-      const user = await prisma.user.findUnique({
-        where: { userId: userId.toString() },
-        select: { threadId: true }
-      });
-
-      if (!user) {
-        logger.warn(`User not found: ${userId}`);
-        return null;
-      }
-
-      return user.threadId;
-    } catch (error) {
-      logger.error('Error in getUserThreadId:', error);
-      throw error;
-    }
-  },
-
-  async setUserThreadId (userId, threadId) {
-    logger.info(`Устанавливаем ID разговора для пользователя: ${userId}, threadId: ${threadId}`);
-    try {
-      const result = await prisma.user.update({
-        where: { userId: userId.toString() },
-        data: { threadId }
-      });
-      logger.info(`Результат обновления: ${JSON.stringify(result)}`);
-      if (!result) {
-        logger.warn(`Пользователь с userId: ${userId} не найден`);
-      }
-    } catch (error) {
-      logger.error('Ошибка в setUserthreadId:', error);
-      throw error;
-    }
-  },
-
-  async updateTokenUsage(userId, tokensUsed) {
-    await prisma.user.update({
-      where: { userId: userId.toString() },
-      data: {
-        totalTokensUsed: {
-          increment: tokensUsed
+      const botThread = await prisma.botThread.findUnique({
+        where: {
+          userId_botType: {
+            userId: userId.toString(),
+            botType: botType
+          }
         }
+      });
+      if (botThread) {
+        return botThread.threadId;
       }
-    });
+      
+      // Fallback к старому полю threadId в таблице User
+      const user = await prisma.user.findUnique({
+        where: { userId: userId.toString() }
+      });
+      if (user && user.threadId) {
+        // Если нашли старый threadId, перенесем его в BotThread
+        await this.setUserThreadId(userId, botType, user.threadId);
+        return user.threadId;
+      }
+      
+      return null;
+    } catch (error) {
+      logger.error(`Error getting thread ID for user ${userId} and bot type ${botType}:`, error);
+      throw error;
+    }
   },
+
+  async setUserThreadId(userId, botType, threadId) {
+    try {
+      // Сначала проверяем, существует ли пользователь
+      const user = await prisma.user.findUnique({
+        where: { userId: userId.toString() }
+      });
   
+      if (!user) {
+        logger.error(`User with ID ${userId} not found. Cannot set threadId.`);
+        throw new Error(`User with ID ${userId} not found`);
+      }
+  
+      // Теперь обновляем или создаем запись в BotThread
+      await prisma.botThread.upsert({
+        where: {
+          userId_botType: {
+            userId: userId.toString(),
+            botType: botType
+          }
+        },
+        update: { 
+          threadId: threadId 
+        },
+        create: {
+          botType: botType,
+          threadId: threadId,
+          user: {
+            connect: { userId: userId.toString() }
+          }
+        }
+      });
+  
+      logger.info(`Successfully set thread ID for user ${userId} and bot type ${botType}`);
+    } catch (error) {
+      logger.error(`Error setting thread ID for user ${userId} and bot type ${botType}:`, error);
+      throw error;
+    }
+  },
+
+
   async getTotalTokensUsed(userId) {
     const user = await prisma.user.findUnique({
       where: { userId: userId.toString() },
       select: { totalTokensUsed: true }
     });
     return user?.totalTokensUsed || 0;
-  }
+  },
+
+  async updateTokenUsage(userId, tokensUsed) {
+    logger.info(`Updating token usage for user ${userId}: +${tokensUsed} tokens`);
+    try {
+      await prisma.user.update({
+        where: { userId: userId.toString() },
+        data: {
+          totalTokensUsed: {
+            increment: tokensUsed
+          }
+        }
+      });
+      logger.info(`Token usage updated for user ${userId}`);
+    } catch (error) {
+      logger.error(`Error updating token usage for user ${userId}:`, error);
+      throw error;
+    }
+  },
 };
 

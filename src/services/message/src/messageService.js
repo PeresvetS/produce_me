@@ -3,19 +3,18 @@
 const OpenAI = require('openai');
 const config = require('../../../config');
 const logger = require('../../../utils/logger');
-const documentReaderService = require('./documentReaderService');
 const subscriptionService = require('../../subscription/');
 const conversationService = require('./conversationService');
-const promptSelectionService = require('./promptSelectionService');
+const documentReaderService = require('./documentReaderService');
 
 const openai = new OpenAI({ apiKey: config.openaiApiKey });
 
-async function processMessageContent(userId, message) {
+async function processMessageContent(userId, message, botType) {
   const urlRegex = /(https?:\/\/[^\s]+)/g;
   const urls = message.match(urlRegex);
 
   if (urls && (urls[0].includes('docs.google.com') || urls[0].includes('drive.google.com') || urls[0].includes('disk.yandex.ru'))) {
-    return await documentReaderService.processDocumentUrl(urls[0], message);
+    return await documentReaderService.processDocumentUrl(urls[0], message, botType);
   }
 
   return message;
@@ -91,48 +90,43 @@ async function cancelActiveRuns(threadId) {
 //   }
 // }
 
-async function sendMessage(userId, message, retryCount = 3) {
-  logger.info(`Sending message for user ${userId} to OpenAI Assistants API`);
+async function sendMessage(userId, message, botType) {
+  logger.info(`Sending message for user ${userId} to OpenAI Assistants API for bot type ${botType}`);
   try {
-    let threadId = await subscriptionService.getUserThreadId(userId);
-    const content = await processMessageContent(userId, message);
-    // const systemPrompt = await promptSelectionService.selectPrompt(userId, content);
+    let threadId = await subscriptionService.getUserThreadId(userId, botType);
+    const content = await processMessageContent(userId, message, botType);
 
     if (!threadId) {
       const thread = await openai.beta.threads.create();
       threadId = thread.id;
-      await subscriptionService.setUserThreadId(userId, threadId);
+      await subscriptionService.setUserThreadId(userId, botType, threadId);
     }
 
     await cancelActiveRuns(threadId);
-    // await cleanupOldMessages(threadId);
 
     await openai.beta.threads.messages.create(threadId, {
       role: "user",
       content: content
     });
 
+    const assistantId = config.assistantIds[botType];
     const run = await openai.beta.threads.runs.create(threadId, {
-      assistant_id: config.assistantId,
-      // instructions: systemPrompt
+      assistant_id: assistantId,
     });
 
     const { message: assistantMessage, usage } = await waitForRunCompletion(threadId, run.id);
 
-    await conversationService.logConversation(userId, message, assistantMessage);
+    await conversationService.logConversation(userId, botType, message, assistantMessage);
     await updateTokenUsage(userId, usage);
 
     return assistantMessage.trim();
   } catch (error) {
-    logger.error('Error sending message to OpenAI Assistants API:', error);
-    if (retryCount > 0 && (error.status === 429 || error.message.includes('Request too large'))) {
-      logger.info(`Retrying sendMessage for user ${userId}. Attempts left: ${retryCount - 1}`);
-      await new Promise(resolve => setTimeout(resolve, 5000));
-      return sendMessage(userId, message, retryCount - 1);
-    }
+    logger.error(`Error sending message to OpenAI Assistants API for bot type ${botType}:`, error);
     throw error;
   }
 }
+
+
 
 async function updateTokenUsage(userId, usage) {
   if (usage && usage.total_tokens) {
@@ -148,8 +142,8 @@ async function updateTokenUsage(userId, usage) {
 }
 
 module.exports = {  
-  processMessageContent,
   sendMessage,
+  updateTokenUsage,
   waitForRunCompletion,
-  updateTokenUsage
+  processMessageContent,
 };

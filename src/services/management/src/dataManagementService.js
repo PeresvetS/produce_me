@@ -11,6 +11,7 @@ async function checkUserByID(userId) {
 }
 
 async function checkUserByUsername(username) {
+  logger.info(`Checking user by username: ${username}`);
   const user = await prisma.user.findUnique({
     where: { username: username }
   });
@@ -39,7 +40,8 @@ async function createUserByUsername(username) {
         userId: `temp_${Date.now()}`, // Temporary userId, should be updated later
         username: username,
         messageCount: 0,
-        newDialogCount: 0
+        newDialogCount: 0,
+        totalTokensUsed: 0
       }
     });
     logger.info(`User created with username: ${username}`);
@@ -204,18 +206,51 @@ async function getStats() {
   }
 }
 
+async function getBotUsers(botType, limit = 10) {
+  try {
+    const users = await prisma.user.findMany({
+      where: {
+        botThreads: {
+          some: {
+            botType: botType
+          }
+        }
+      },
+      take: limit,
+      include: {
+        botThreads: true,
+        conversations: {
+          where: {
+            botType: botType
+          }
+        }
+      }
+    });
+
+    return users.map(user => ({
+      ...user,
+      dialogCount: user.conversations.length,
+      threadId: user.botThreads.find(bt => bt.botType === botType)?.threadId
+    }));
+  } catch (error) {
+    logger.error(`Error getting users for bot type ${botType}:`, error);
+    throw error;
+  }
+}
+
 module.exports = {
-  checkUserByID,
-  checkUserByUsername,
+  getStats,
   checkUser,
-  createUserByUsername,
-  updateUserID,
-  checkOrCreateUser,
-  checkOrCreateUserByUsername,
   createUser,
-  updateUserData,
+  getBotUsers,
+  getUserInfo,
   getUserData,
   getAllUsers,
-  getUserInfo,
-  getStats,
+  updateUserID,
+  checkUserByID,
+  updateUserData,
+  checkOrCreateUser,
+  checkUserByUsername,
+  createUserByUsername,
+  checkOrCreateUserByUsername,
 };

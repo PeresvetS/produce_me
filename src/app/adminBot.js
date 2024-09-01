@@ -126,24 +126,45 @@ Username: ${user.username}
   }
 });
 
-adminBot.command('getlog', async (ctx) => {
-  const args = ctx.message.text.split(' ');
-  if (args.length !== 2) {
-    await ctx.reply('Использование: /getlog userId');
+
+adminBot.command('botusers', async (ctx) => {
+  const [, botType, limitStr] = ctx.message.text.split(' ');
+  const limit = parseInt(limitStr) || 10;
+
+  if (!['PRODUCER', 'MARKETER', 'CUSDEV'].includes(botType.toUpperCase())) {
+    await ctx.reply('Использование: /botusers [PRODUCER|MARKETER|CUSDEV] [limit]');
     return;
   }
 
-  const userId = args[1];
+  try {
+    const users = await managementService.getBotUsers(botType.toUpperCase(), limit);
+    let message = `Список пользователей бота ${botType}:\n\n`;
+    users.forEach(user => {
+      const subscriptionStatus = user.subscriptionEnd ? `Подписка до ${user.subscriptionEnd}` : 'Нет активной подписки';
+      message += `ID: ${user.id}, userId: ${user.userId}, Имя: ${user.name}, Username: @${user.username}, Диалогов: ${user.dialogCount}, Токенов: ${user.totalTokensUsed}, ${subscriptionStatus}\n\n`;
+    });
+    await ctx.reply(message);
+  } catch (error) {
+    logger.error('Error fetching bot users:', error);
+    await ctx.reply('Произошла ошибка при получении списка пользователей бота.');
+  }
+});
+
+adminBot.command('getlog', async (ctx) => {
+  const [, userId, botType] = ctx.message.text.split(' ');
+  if (!userId || !botType) {
+    await ctx.reply('Использование: /getlog userId [PRODUCER|MARKETER|CUSDEV]');
+    return;
+  }
 
   try {
-    const log = await messageService.getConversationLog(userId);
-    if (log === 'Лог переписки для данного пользователя не найден.') {
+    const log = await messageService.getConversationLog(userId, botType.toUpperCase());
+    if (log === 'Лог переписки для данного пользователя и бота не найден.') {
       await ctx.reply(log);
     } else if (log.length > 4096) {
-      // Если лог слишком длинный для отправки в виде сообщения, отправляем его как файл
       await ctx.replyWithDocument({
         source: Buffer.from(log),
-        filename: `conversation_log_${userId}.txt`
+        filename: `conversation_log_${userId}_${botType}.txt`
       });
     } else {
       await ctx.reply(log);

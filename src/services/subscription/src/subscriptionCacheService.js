@@ -16,22 +16,22 @@ module.exports = {
     return subscriptionCache.get(userId.toString());
   },
 
-  async logMessage(userId) {
-    logger.info(`Logging message for user ${userId}`);
-    const key = `message_count_${userId}`;
+  async logMessage(userId, botType) {
+    logger.info(`Logging message for user ${userId} in bot ${botType}`);
+    const key = `message_count_${userId}_${botType}`;
     const count = subscriptionCache.get(key) || 0;
     subscriptionCache.set(key, count + 1);
   },
 
-  async getMessageCount(userId) {
-    logger.info(`Getting message count for user ${userId}`);
-    const key = `message_count_${userId}`;
+  async getMessageCount(userId, botType) {
+    logger.info(`Getting message count for user ${userId} in bot ${botType}`);
+    const key = `message_count_${userId}_${botType}`;
     return subscriptionCache.get(key) || 0;
   },
 
-  async resetMessageCount(userId) {
-    logger.info(`Resetting message count for user ${userId}`);
-    const key = `message_count_${userId}`;
+  async resetMessageCount(userId, botType) {
+    logger.info(`Resetting message count for user ${userId} in bot ${botType}`);
+    const key = `message_count_${userId}_${botType}`;
     subscriptionCache.set(key, 0);
   }
 };

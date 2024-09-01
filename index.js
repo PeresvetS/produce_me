@@ -1,6 +1,8 @@
 // index.js
 
-const userBot = require('./src/app/userBot');
+const producerBot = require('./src/app/producerBot');
+const marketerBot = require('./src/app/marketerBot');
+const cusdevBot = require('./src/app/cusdevBot');
 const adminBot = require('./src/app/adminBot');
 const { Bot } = require('grammy');
 const logger = require('./src/utils/logger');
@@ -41,7 +43,6 @@ async function checkBotToken(token, botName) {
   }
 }
 
-
 async function startBot(bot, name) {
   return new Promise((resolve, reject) => {
     bot.start({
@@ -53,19 +54,23 @@ async function startBot(bot, name) {
   });
 }
 
-
 async function startBots() {
   console.log('Inside startBots function');
-  const userBotTokenValid = await checkBotToken(config.userBotToken, 'User Bot');
+  const producerBotTokenValid = await checkBotToken(config.producerBotToken, 'Producer Bot');
+  const marketerBotTokenValid = await checkBotToken(config.marketerBotToken, 'Marketer Bot');
+  const cusdevBotTokenValid = await checkBotToken(config.cusdevBotToken, 'CusDev Bot');
   const adminBotTokenValid = await checkBotToken(config.adminBotToken, 'Admin Bot');
   console.log('tokens valid');
-  if (!userBotTokenValid || !adminBotTokenValid) {
+  
+  if (!producerBotTokenValid || !marketerBotTokenValid || !cusdevBotTokenValid || !adminBotTokenValid) {
     console.error('One or more bot tokens are invalid. Please check your configuration.');
     process.exit(1);
   }
 
   try {
-    await startBot(userBot, 'User Bot');
+    await startBot(producerBot, 'Producer Bot');
+    await startBot(marketerBot, 'Marketer Bot');
+    await startBot(cusdevBot, 'CusDev Bot');
     await startBot(adminBot, 'Admin Bot');
     console.log('All bots started successfully');
   } catch (error) {
@@ -95,22 +100,15 @@ startBots().then(() => {
 
 console.log('End of main script');
 
-// Обработка необработанных ошибок
-process.on('uncaughtException', (error) => {
-  logger.error('Uncaught Exception:', error);
-});
-
-process.on('unhandledRejection', (reason, promise) => {
-  logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
-});
-
 // Graceful shutdown
 const SHUTDOWN_TIMEOUT = 5000; // 5 секунд
 
 async function shutdown(signal) {
   logger.info(`Received ${signal}. Shutting down gracefully.`);
   const shutdownPromise = Promise.all([
-    userBot.stop(),
+    producerBot.stop(),
+    marketerBot.stop(),
+    cusdevBot.stop(),
     adminBot.stop()
   ]);
 

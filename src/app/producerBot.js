@@ -1,4 +1,4 @@
-// src/app/userBot.js
+// src/app/producerBot.js
 
 const { Bot, session } = require('grammy');
 const axios = require('axios');
@@ -12,16 +12,13 @@ const messageService = require('../services/message');
 const fileService = require('../services/message/src/fileService');
 const logger = require('../utils/logger');
 const { cleanMessage, escapeMarkdown } = require('../utils/messageUtils');
-const tempDir = process.env.TEMP_DIR || path.join(__dirname, '../../temp');
 
-logger.info(`start of bot`);
+logger.info(`start of producer bot`);
 
-const bot = new Bot(config.userBotToken);
+const bot = new Bot(config.producerBotToken);
 
-logger.info(`start of bot`);
-
-// Middleware для сессий
 bot.use(session({ initial: () => ({ threadId: null }) }));
+const tempDir = process.env.TEMP_DIR || path.join(__dirname, '../../temp');
 
 async function startNewDialog(ctx, isNewProducer = false) {
   const userId = ctx.from.id;
@@ -34,7 +31,6 @@ async function startNewDialog(ctx, isNewProducer = false) {
       : 'Добро пожаловать, я твой AI\\-продюсер Лея\\! Чтобы начать общение, просто отправь сообщение';
     ctx.reply(message, { parse_mode: 'MarkdownV2' });
     await managementService.incrementNewDialogCount(userId);
-    await subscriptionService.setUserThreadId(userId, null);
   } else {
     ctx.reply('У тебя нет активной подписки. Пожалуйста, обнови твою подписку через @neuro_zen_helps');
     return;
@@ -66,10 +62,10 @@ bot.on('message:text', async (ctx) => {
     await ctx.replyWithChatAction('typing');
 
     logger.info(`Sending message to OpenAI for user ${userId}`);
-    let response = await messageService.sendMessage(userId, message);
+    let response = await messageService.sendMessage(userId, message, 'PRODUCER');
     logger.info(`Received response from OpenAI for user ${userId}: ${response}`);
     
-    await subscriptionService.logMessage(userId);
+    await subscriptionService.logMessage(userId, 'PRODUCER');
     await managementService.incrementDialogCount(userId);
 
     const maxLength = 4096;
@@ -90,6 +86,7 @@ bot.on('message:text', async (ctx) => {
   }
 });
 
+
 bot.on('message:voice', async (ctx) => {
   const userId = ctx.from.id;
 
@@ -104,7 +101,7 @@ bot.on('message:voice', async (ctx) => {
 
     const fileId = ctx.message.voice.file_id;
     const file = await ctx.api.getFile(fileId);
-    const fileUrl = `https://api.telegram.org/file/bot${config.userBotToken}/${file.file_path}`;
+    const fileUrl = `https://api.telegram.org/file/bot${config.producerBotToken}/${file.file_path}`;
     
     const response = await axios({
       method: 'get',
@@ -127,13 +124,13 @@ bot.on('message:voice', async (ctx) => {
         logger.info(`Temporary file path: ${tempFilePath}`);
         logger.info(`File exists before processing: ${await fsp.access(tempFilePath).then(() => 'Yes', () => 'No')}`)
 
-    const aiResponse = await messageService.processVoiceMessage(userId, tempFilePath);
+    const aiResponse = await messageService.processVoiceMessage(userId, tempFilePath, 'PRODUCER');
 
     // Используем fs.promises для асинхронного удаления файла
     await fsp.unlink(tempFilePath).catch(err => logger.warn(`Failed to delete temp file: ${err}`));
 
 
-    await subscriptionService.logMessage(userId);
+    await subscriptionService.logMessage(userId, 'PRODUCER');
     await managementService.incrementDialogCount(userId);
 
     const cleanResponse = cleanMessage(aiResponse);

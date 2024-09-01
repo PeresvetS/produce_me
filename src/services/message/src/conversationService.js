@@ -4,19 +4,25 @@ const prisma = require('../../../db/prisma');
 const logger = require('../../../utils/logger');
 
 module.exports = {
-  async resetConversation(userId) {
-    await prisma.user.update({
-      where: { userId: userId.toString() },
+  async resetConversation(userId, botType) {
+    await prisma.botThread.update({
+      where: {
+        userId_botType: {
+          userId: userId.toString(),
+          botType: botType
+        }
+      },
       data: { threadId: null }
     });
-    await this.logConversation(userId, "System: Conversation reset", "System: Conversation reset");
+    await this.logConversation(userId, botType, "System: Conversation reset", "System: Conversation reset");
   },
 
-  async logConversation(userId, userMessage, assistantMessage) {
+  async logConversation(userId, botType, userMessage, assistantMessage) {
     try {
       await prisma.conversation.create({
         data: {
           userId: userId.toString(),
+          botType: botType,
           userMessage,
           assistantMessage,
           timestamp: new Date()
@@ -27,15 +33,18 @@ module.exports = {
     }
   },
 
-  async getConversationLog(userId) {
+  async getConversationLog(userId, botType) {
     try {
       const conversations = await prisma.conversation.findMany({
-        where: { userId: userId.toString() },
+        where: {
+          userId: userId.toString(),
+          botType: botType
+        },
         orderBy: { timestamp: 'asc' },
       });
 
       if (conversations.length === 0) {
-        return 'Лог переписки для данного пользователя не найден.';
+        return 'Лог переписки для данного пользователя и бота не найден.';
       }
 
       return conversations.map(conv => `
