@@ -173,7 +173,7 @@ module.exports = {
       logger.error(`Error setting thread ID for user ${userId} and bot type ${botType}:`, error);
       throw error;
     }
-  }
+  },
 
 
   async getTotalTokensUsed(userId) {
