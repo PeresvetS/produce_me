@@ -52,4 +52,5 @@ enum BotType {
   PRODUCER
   MARKETER
   CUSDEV
+  METHO
 }

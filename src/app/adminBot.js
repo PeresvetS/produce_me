@@ -9,7 +9,6 @@ const logger = require('../utils/logger');
 
 logger.info(`start of bot`);
 
-
 const adminBot = new Bot(config.adminBotToken);
 
 logger.info(`next of bot`);
@@ -91,7 +90,6 @@ adminBot.command('addsubscription', async (ctx) => {
   }
 
   try {
-
     const result = await subscriptionService.addSubscription(username.replace('@', ''), months);
     logger.info(`Subscription added successfully: ${result}`);
     await ctx.reply(result);
@@ -126,13 +124,12 @@ Username: ${user.username}
   }
 });
 
-
 adminBot.command('botusers', async (ctx) => {
   const [, botType, limitStr] = ctx.message.text.split(' ');
   const limit = parseInt(limitStr) || 10;
 
-  if (!['PRODUCER', 'MARKETER', 'CUSDEV'].includes(botType.toUpperCase())) {
-    await ctx.reply('Использование: /botusers [PRODUCER|MARKETER|CUSDEV] [limit]');
+  if (!['PRODUCER', 'MARKETER', 'CUSDEV', 'METHO'].includes(botType.toUpperCase())) {
+    await ctx.reply('Использование: /botusers [PRODUCER|MARKETER|CUSDEV|METHO] [limit]');
     return;
   }
 
@@ -153,7 +150,7 @@ adminBot.command('botusers', async (ctx) => {
 adminBot.command('getlog', async (ctx) => {
   const [, userId, botType] = ctx.message.text.split(' ');
   if (!userId || !botType) {
-    await ctx.reply('Использование: /getlog userId [PRODUCER|MARKETER|CUSDEV]');
+    await ctx.reply('Использование: /getlog userId [PRODUCER|MARKETER|CUSDEV|METHO]');
     return;
   }
 

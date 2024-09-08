@@ -3,6 +3,7 @@
 const producerBot = require('./src/app/producerBot');
 const marketerBot = require('./src/app/marketerBot');
 const cusdevBot = require('./src/app/cusdevBot');
+const methoBot = require('./src/app/methoBot');  // Добавлен импорт methoBot
 const adminBot = require('./src/app/adminBot');
 const { Bot } = require('grammy');
 const logger = require('./src/utils/logger');
@@ -59,10 +60,11 @@ async function startBots() {
   const producerBotTokenValid = await checkBotToken(config.producerBotToken, 'Producer Bot');
   const marketerBotTokenValid = await checkBotToken(config.marketerBotToken, 'Marketer Bot');
   const cusdevBotTokenValid = await checkBotToken(config.cusdevBotToken, 'CusDev Bot');
+  const methoBotTokenValid = await checkBotToken(config.methoBotToken, 'Metho Bot');
   const adminBotTokenValid = await checkBotToken(config.adminBotToken, 'Admin Bot');
   console.log('tokens valid');
   
-  if (!producerBotTokenValid || !marketerBotTokenValid || !cusdevBotTokenValid || !adminBotTokenValid) {
+  if (!producerBotTokenValid || !marketerBotTokenValid || !cusdevBotTokenValid || !methoBotTokenValid || !adminBotTokenValid) {
     console.error('One or more bot tokens are invalid. Please check your configuration.');
     process.exit(1);
   }
@@ -71,6 +73,7 @@ async function startBots() {
     await startBot(producerBot, 'Producer Bot');
     await startBot(marketerBot, 'Marketer Bot');
     await startBot(cusdevBot, 'CusDev Bot');
+    await startBot(methoBot, 'Metho Bot');  // Добавлен запуск methoBot
     await startBot(adminBot, 'Admin Bot');
     console.log('All bots started successfully');
   } catch (error) {
@@ -109,6 +112,7 @@ async function shutdown(signal) {
     producerBot.stop(),
     marketerBot.stop(),
     cusdevBot.stop(),
+    methoBot.stop(),  // Добавлена остановка methoBot
     adminBot.stop()
   ]);
 
@@ -126,4 +130,4 @@ async function shutdown(signal) {
 }
 
 process.once('SIGINT', () => shutdown('SIGINT'));
-process.once('SIGTERM', () => shutdown('SIGTERM'));
+process.once('SIGTERM', () => shutdown('SIGTERM')); 

@@ -19,6 +19,7 @@ const requiredEnvVars = [
   'PRODUCER_BOT_TOKEN',
   'MARKETER_BOT_TOKEN',
   'CUSDEV_BOT_TOKEN',
+  'METHO_BOT_TOKEN',
 ];
 
 requiredEnvVars.forEach(varName => {
@@ -32,6 +33,7 @@ const config = {
   producerBotToken: process.env.PRODUCER_BOT_TOKEN,
   marketerBotToken: process.env.MARKETER_BOT_TOKEN,
   cusdevBotToken: process.env.CUSDEV_BOT_TOKEN,
+  methoBotToken: process.env.METHO_BOT_TOKEN,
   adminBotToken: process.env.ADMIN_BOT_TOKEN,
   databaseUrl: process.env.DATABASE_URL,
   groqApiKey: process.env.GROQ_API_KEY,
@@ -40,7 +42,8 @@ const config = {
   assistantIds: {
     PRODUCER: process.env.PRODUCER_ASSISTANT_ID,
     MARKETER: process.env.MARKETER_ASSISTANT_ID,
-    CUSDEV: process.env.CUSDEV_ASSISTANT_ID
+    CUSDEV: process.env.CUSDEV_ASSISTANT_ID,
+    METHO: process.env.METHO_ASSISTANT_ID,
   },
 };
 
