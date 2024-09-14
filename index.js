@@ -2,8 +2,9 @@
 
 const producerBot = require('./src/app/producerBot');
 const marketerBot = require('./src/app/marketerBot');
+const contentBot = require('./src/app/contentBot');
 const cusdevBot = require('./src/app/cusdevBot');
-const methoBot = require('./src/app/methoBot');  // Добавлен импорт methoBot
+const methoBot = require('./src/app/methoBot');
 const adminBot = require('./src/app/adminBot');
 const { Bot } = require('grammy');
 const logger = require('./src/utils/logger');
@@ -59,12 +60,13 @@ async function startBots() {
   console.log('Inside startBots function');
   const producerBotTokenValid = await checkBotToken(config.producerBotToken, 'Producer Bot');
   const marketerBotTokenValid = await checkBotToken(config.marketerBotToken, 'Marketer Bot');
+  const contentBotTokenValid = await checkBotToken(config.contentBotToken, 'Content Bot');
   const cusdevBotTokenValid = await checkBotToken(config.cusdevBotToken, 'CusDev Bot');
   const methoBotTokenValid = await checkBotToken(config.methoBotToken, 'Metho Bot');
   const adminBotTokenValid = await checkBotToken(config.adminBotToken, 'Admin Bot');
   console.log('tokens valid');
   
-  if (!producerBotTokenValid || !marketerBotTokenValid || !cusdevBotTokenValid || !methoBotTokenValid || !adminBotTokenValid) {
+  if (!producerBotTokenValid || !marketerBotTokenValid || !contentBotTokenValid || !cusdevBotTokenValid || !methoBotTokenValid || !adminBotTokenValid) {
     console.error('One or more bot tokens are invalid. Please check your configuration.');
     process.exit(1);
   }
@@ -72,8 +74,9 @@ async function startBots() {
   try {
     await startBot(producerBot, 'Producer Bot');
     await startBot(marketerBot, 'Marketer Bot');
+    await startBot(contentBot, 'Content Bot');
     await startBot(cusdevBot, 'CusDev Bot');
-    await startBot(methoBot, 'Metho Bot');  // Добавлен запуск methoBot
+    await startBot(methoBot, 'Metho Bot');
     await startBot(adminBot, 'Admin Bot');
     console.log('All bots started successfully');
   } catch (error) {
@@ -111,6 +114,7 @@ async function shutdown(signal) {
   const shutdownPromise = Promise.all([
     producerBot.stop(),
     marketerBot.stop(),
+    contentBot.stop(),
     cusdevBot.stop(),
     methoBot.stop(),  // Добавлена остановка methoBot
     adminBot.stop()

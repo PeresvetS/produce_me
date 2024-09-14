@@ -77,7 +77,7 @@ module.exports = {
       throw error;
     }
   },
-
+  
   async getStats() {
     logger.info('Fetching user statistics');
     try {

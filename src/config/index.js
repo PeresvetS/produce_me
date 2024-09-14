@@ -20,6 +20,7 @@ const requiredEnvVars = [
   'MARKETER_BOT_TOKEN',
   'CUSDEV_BOT_TOKEN',
   'METHO_BOT_TOKEN',
+  'CONTENT_BOT_TOKEN',
 ];
 
 requiredEnvVars.forEach(varName => {
@@ -44,7 +45,9 @@ const config = {
     MARKETER: process.env.MARKETER_ASSISTANT_ID,
     CUSDEV: process.env.CUSDEV_ASSISTANT_ID,
     METHO: process.env.METHO_ASSISTANT_ID,
+    CONTENT: process.env.CONTENT_ASSISTANT_ID
   },
+  contentBotToken: process.env.CONTENT_BOT_TOKEN,
 };
 
 console.log('Environment variables:');

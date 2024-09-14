@@ -48,9 +48,20 @@ model BotThread {
   @@unique([userId, botType])
 }
 
+model Conversation {
+  id               Int      @id @default(autoincrement())
+  userId           String
+  botType          BotType? 
+  userMessage      String
+  assistantMessage String
+  timestamp        DateTime @default(now())
+  user             User     @relation(fields: [userId], references: [userId])
+}
+
 enum BotType {
   PRODUCER
   MARKETER
   CUSDEV
   METHO
+  CONTENT
 }
