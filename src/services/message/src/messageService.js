@@ -78,18 +78,6 @@ async function cancelActiveRuns(threadId) {
     }
   }
 }
-
-// async function cleanupOldMessages(threadId, maxMessages = 10) {
-//   const messages = await openai.beta.threads.messages.list(threadId);
-//   if (messages.data.length > maxMessages) {
-//     const messagesToDelete = messages.data.slice(maxMessages);
-//     for (const message of messagesToDelete) {
-//       await openai.beta.threads.messages.del(threadId, message.id);
-//     }
-//     logger.info(`Cleaned up ${messagesToDelete.length} old messages from thread ${threadId}`);
-//   }
-// }
-
 async function sendMessage(userId, message, botType) {
   logger.info(`Sending message for user ${userId} to OpenAI Assistants API for bot type ${botType}`);
   try {

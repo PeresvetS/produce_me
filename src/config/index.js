@@ -23,6 +23,8 @@ const requiredEnvVars = [
   'CUSDEV_BOT_TOKEN',
   'METHO_BOT_TOKEN',
   'CONTENT_BOT_TOKEN',
+  'SALE_BOT_TOKEN',
+  'SALE_ASSISTANT_ID'
 ];
 
 requiredEnvVars.forEach(varName => {
@@ -38,6 +40,8 @@ const config = {
   cusdevBotToken: process.env.CUSDEV_BOT_TOKEN,
   methoBotToken: process.env.METHO_BOT_TOKEN,
   contentBotToken: process.env.CONTENT_BOT_TOKEN,
+  saleBotToken: process.env.SALE_BOT_TOKEN,
+  contentBotToken: process.env.CONTENT_BOT_TOKEN,
   adminBotToken: process.env.ADMIN_BOT_TOKEN,
   databaseUrl: process.env.DATABASE_URL,
   groqApiKey: process.env.GROQ_API_KEY,
@@ -48,14 +52,12 @@ const config = {
     MARKETER: process.env.MARKETER_ASSISTANT_ID,
     CUSDEV: process.env.CUSDEV_ASSISTANT_ID,
     METHO: process.env.METHO_ASSISTANT_ID,
-    CONTENT: process.env.CONTENT_ASSISTANT_ID
+    CONTENT: process.env.CONTENT_ASSISTANT_ID,
+    SALE: process.env.SALE_ASSISTANT_ID
   },
-  contentBotToken: process.env.CONTENT_BOT_TOKEN,
 };
 
 console.log('Environment variables:');
 for (const [key, value] of Object.entries(config)) {
   console.log(`${key}: ${value ? 'Set' : 'Not set'}`);
 }
-
-module.exports = config;

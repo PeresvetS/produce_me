@@ -128,8 +128,8 @@ adminBot.command('botusers', async (ctx) => {
   const [, botType, limitStr] = ctx.message.text.split(' ');
   const limit = parseInt(limitStr) || 10;
 
-  if (!['PRODUCER', 'MARKETER', 'CUSDEV', 'METHO'].includes(botType.toUpperCase())) {
-    await ctx.reply('Использование: /botusers [PRODUCER|MARKETER|CUSDEV|METHO] [limit]');
+  if (!['PRODUCER', 'MARKETER', 'CUSDEV', 'METHO', 'CONTENT', 'SALE'].includes(botType.toUpperCase())) {
+    await ctx.reply('Использование: /botusers [PRODUCER|MARKETER|CUSDEV|METHO|CONTENT|SALE] [limit]');
     return;
   }
 
@@ -150,7 +150,7 @@ adminBot.command('botusers', async (ctx) => {
 adminBot.command('getlog', async (ctx) => {
   const [, userId, botType] = ctx.message.text.split(' ');
   if (!userId || !botType) {
-    await ctx.reply('Использование: /getlog userId [PRODUCER|MARKETER|CUSDEV|METHO]');
+    await ctx.reply('Использование: /getlog userId [PRODUCER|MARKETER|CUSDEV|METHO|CONTENT|SALE]');
     return;
   }
 

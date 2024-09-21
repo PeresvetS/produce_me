@@ -6,6 +6,7 @@ const contentBot = require('./src/app/contentBot');
 const cusdevBot = require('./src/app/cusdevBot');
 const methoBot = require('./src/app/methoBot');
 const adminBot = require('./src/app/adminBot');
+const saleBot = require('./src/app/saleBot');
 const { Bot } = require('grammy');
 const logger = require('./src/utils/logger');
 const config = require('./src/config');
@@ -64,9 +65,10 @@ async function startBots() {
   const cusdevBotTokenValid = await checkBotToken(config.cusdevBotToken, 'CusDev Bot');
   const methoBotTokenValid = await checkBotToken(config.methoBotToken, 'Metho Bot');
   const adminBotTokenValid = await checkBotToken(config.adminBotToken, 'Admin Bot');
+  const saleBotTokenValid = await checkBotToken(config.saleBotToken, 'Sale Bot');
   console.log('tokens valid');
   
-  if (!producerBotTokenValid || !marketerBotTokenValid || !contentBotTokenValid || !cusdevBotTokenValid || !methoBotTokenValid || !adminBotTokenValid) {
+  if (!producerBotTokenValid || !marketerBotTokenValid || !contentBotTokenValid || !cusdevBotTokenValid || !methoBotTokenValid || !adminBotTokenValid || !saleBotTokenValid) {
     console.error('One or more bot tokens are invalid. Please check your configuration.');
     process.exit(1);
   }
@@ -78,6 +80,7 @@ async function startBots() {
     await startBot(cusdevBot, 'CusDev Bot');
     await startBot(methoBot, 'Metho Bot');
     await startBot(adminBot, 'Admin Bot');
+    await startBot(saleBot, 'Sale Bot');
     console.log('All bots started successfully');
   } catch (error) {
     console.error('Error starting bots:', error);
@@ -116,8 +119,9 @@ async function shutdown(signal) {
     marketerBot.stop(),
     contentBot.stop(),
     cusdevBot.stop(),
-    methoBot.stop(),  // Добавлена остановка methoBot
-    adminBot.stop()
+    methoBot.stop(),
+    adminBot.stop(),
+    saleBot.stop()
   ]);
 
   try {
