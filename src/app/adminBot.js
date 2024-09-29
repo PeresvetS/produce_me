@@ -128,7 +128,7 @@ adminBot.command('botusers', async (ctx) => {
   const [, botType, limitStr] = ctx.message.text.split(' ');
   const limit = parseInt(limitStr) || 10;
 
-  if (!['PRODUCER', 'MARKETER', 'CUSDEV', 'METHO', 'CONTENT', 'SALE'].includes(botType.toUpperCase())) {
+  if (!['PRODUCER', 'MARKETER', 'CUSDEV', 'METHO', 'CONTENT', 'SALE', 'STRATEGY'].includes(botType.toUpperCase())) {
     await ctx.reply('Использование: /botusers [PRODUCER|MARKETER|CUSDEV|METHO|CONTENT|SALE] [limit]');
     return;
   }

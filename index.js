@@ -1,6 +1,7 @@
 // index.js
 
 const producerBot = require('./src/app/producerBot');
+const strategyBot = require('./src/app/strategyBot');
 const marketerBot = require('./src/app/marketerBot');
 const contentBot = require('./src/app/contentBot');
 const cusdevBot = require('./src/app/cusdevBot');
@@ -59,6 +60,7 @@ async function startBot(bot, name) {
 
 async function startBots() {
   console.log('Inside startBots function');
+  const strategyBotTokenValid = await checkBotToken(config.strategyBotToken, 'Strategy Bot');
   const producerBotTokenValid = await checkBotToken(config.producerBotToken, 'Producer Bot');
   const marketerBotTokenValid = await checkBotToken(config.marketerBotToken, 'Marketer Bot');
   const contentBotTokenValid = await checkBotToken(config.contentBotToken, 'Content Bot');
@@ -74,6 +76,7 @@ async function startBots() {
   }
 
   try {
+    await startBot(strategyBot, 'Strategy Bot');
     await startBot(producerBot, 'Producer Bot');
     await startBot(marketerBot, 'Marketer Bot');
     await startBot(contentBot, 'Content Bot');
@@ -116,12 +119,13 @@ async function shutdown(signal) {
   logger.info(`Received ${signal}. Shutting down gracefully.`);
   const shutdownPromise = Promise.all([
     producerBot.stop(),
+    strategyBot.stop(),
     marketerBot.stop(),
     contentBot.stop(),
     cusdevBot.stop(),
     methoBot.stop(),
     adminBot.stop(),
-    saleBot.stop()
+    saleBot.stop(),
   ]);
 
   try {
