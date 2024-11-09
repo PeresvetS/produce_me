@@ -8,9 +8,10 @@ const cusdevBot = require('./src/app/cusdevBot');
 const methoBot = require('./src/app/methoBot');
 const adminBot = require('./src/app/adminBot');
 const saleBot = require('./src/app/saleBot');
-const { Bot } = require('grammy');
+const sellerBot = require('./src/app/sellerBot');
 const logger = require('./src/utils/logger');
 const config = require('./src/config');
+const { Bot } = require('grammy');
 const http = require('http');
 const fs = require('fs').promises;
 const path = require('path');
@@ -64,13 +65,14 @@ async function startBots() {
   const producerBotTokenValid = await checkBotToken(config.producerBotToken, 'Producer Bot');
   const marketerBotTokenValid = await checkBotToken(config.marketerBotToken, 'Marketer Bot');
   const contentBotTokenValid = await checkBotToken(config.contentBotToken, 'Content Bot');
+  const sellerBotTokenValid = await checkBotToken(config.sellerBotToken, 'Seller Bot');
   const cusdevBotTokenValid = await checkBotToken(config.cusdevBotToken, 'CusDev Bot');
   const methoBotTokenValid = await checkBotToken(config.methoBotToken, 'Metho Bot');
   const adminBotTokenValid = await checkBotToken(config.adminBotToken, 'Admin Bot');
   const saleBotTokenValid = await checkBotToken(config.saleBotToken, 'Sale Bot');
   console.log('tokens valid');
   
-  if (!producerBotTokenValid || !marketerBotTokenValid || !contentBotTokenValid || !cusdevBotTokenValid || !methoBotTokenValid || !adminBotTokenValid || !saleBotTokenValid) {
+  if (!producerBotTokenValid || !marketerBotTokenValid || !contentBotTokenValid || !cusdevBotTokenValid || !methoBotTokenValid || !adminBotTokenValid || !saleBotTokenValid || !sellerBotTokenValid) {
     console.error('One or more bot tokens are invalid. Please check your configuration.');
     process.exit(1);
   }
@@ -81,6 +83,7 @@ async function startBots() {
     await startBot(marketerBot, 'Marketer Bot');
     await startBot(contentBot, 'Content Bot');
     await startBot(cusdevBot, 'CusDev Bot');
+    await startBot(sellerBot, 'Seller Bot');
     await startBot(methoBot, 'Metho Bot');
     await startBot(adminBot, 'Admin Bot');
     await startBot(saleBot, 'Sale Bot');
@@ -123,6 +126,7 @@ async function shutdown(signal) {
     marketerBot.stop(),
     contentBot.stop(),
     cusdevBot.stop(),
+    sellerBot.stop(),
     methoBot.stop(),
     adminBot.stop(),
     saleBot.stop(),

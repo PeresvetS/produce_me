@@ -56,4 +56,5 @@ enum BotType {
   CONTENT
   SALE
   STRATEGY
+  SELLER
 }

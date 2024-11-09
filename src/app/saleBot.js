@@ -1,5 +1,3 @@
-// src/app/saleBot.js
-
 const { Bot, session } = require('grammy');
 const axios = require('axios');
 const fs = require('fs');
@@ -16,7 +14,7 @@ const tempDir = process.env.TEMP_DIR || path.join(__dirname, '../../temp');
 
 logger.info(`start of sale bot`);
 
-const bot = new Bot(config.saleBotToken);
+const bot = new Bot(config.sellerBotToken);
 
 bot.use(session({ initial: () => ({ threadId: null }) }));
 
@@ -26,7 +24,7 @@ async function startNewDialog(ctx) {
   await managementService.checkOrCreateUser(userId, username);
   const subscriptionStatus = await subscriptionService.checkSubscription(userId);
   if (subscriptionStatus) {
-    ctx.reply('Привет! Я Тимур, твой AI-ассистент по построению продаж. Чем я могу тебе помочь?');
+    ctx.reply('Привет! Я Вин, твой AI-друг и помощник в продажах. Чем я могу тебе помочь?');
     await managementService.incrementNewDialogCount(userId);
   } else {
     ctx.reply('У тебя нет активной подписки. Пожалуйста, обнови твою подписку через @neuro_zen_helps');
@@ -92,7 +90,7 @@ bot.on('message:voice', async (ctx) => {
 
     const fileId = ctx.message.voice.file_id;
     const file = await ctx.api.getFile(fileId);
-    const fileUrl = `https://api.telegram.org/file/bot${config.saleBotToken}/${file.file_path}`;
+    const fileUrl = `https://api.telegram.org/file/bot${config.sellerBotToken}/${file.file_path}`;
     
     const response = await axios({
       method: 'get',

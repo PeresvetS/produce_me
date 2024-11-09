@@ -26,7 +26,8 @@ const requiredEnvVars = [
   'SALE_BOT_TOKEN',
   'SALE_ASSISTANT_ID',
   'STRATEGY_ASSISTANT_ID',
-  'STRATEGY_BOT_TOKEN'
+  'STRATEGY_BOT_TOKEN',
+  'SELLER_BOT_TOKEN'
 ];
 
 requiredEnvVars.forEach(varName => {
@@ -44,6 +45,7 @@ const config = {
   strategyBotToken: process.env.STRATEGY_BOT_TOKEN,
   contentBotToken: process.env.CONTENT_BOT_TOKEN,
   saleBotToken: process.env.SALE_BOT_TOKEN,
+  sellerBotToken: process.env.SELLER_BOT_TOKEN,
   adminBotToken: process.env.ADMIN_BOT_TOKEN,
   databaseUrl: process.env.DATABASE_URL,
   groqApiKey: process.env.GROQ_API_KEY,
@@ -56,9 +58,9 @@ const config = {
     METHO: process.env.METHO_ASSISTANT_ID,
     CONTENT: process.env.CONTENT_ASSISTANT_ID,
     SALE: process.env.SALE_ASSISTANT_ID,
-    STRATEGY: process.env.STRATEGY_ASSISTANT_ID
-  },
-
+    STRATEGY: process.env.STRATEGY_ASSISTANT_ID,
+    SELLER: process.env.SELLER_ASSISTANT_ID
+  }
 };
 
 module.exports = config;
