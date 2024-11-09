@@ -9,19 +9,45 @@ const logger = require('../utils/logger');
 
 logger.info(`start of bot`);
 
+// Инициализация бота с сессией
 const adminBot = new Bot(config.adminBotToken);
 
-logger.info(`next of bot`);
+// 1. Сначала добавляем session middleware
+adminBot.use(session({
+  initial: () => ({})
+}));
 
-// Middleware для проверки прав администратора
+// 2. Добавляем debug логирование
+adminBot.use((ctx, next) => {
+  logger.info('New update received:', {
+    updateType: ctx.updateType,
+    from: ctx.from,
+    text: ctx.message?.text
+  });
+  return next();
+});
+
+// 3. Middleware для проверки прав администратора (перемещено выше)
 adminBot.use(async (ctx, next) => {
   const userId = ctx.from.id;
-  if (await managementService.isAdmin(userId)) {
+  logger.info(`Checking admin rights for user ${userId}`);
+  
+  // Проверяем, является ли пользователь администратором
+  const isAdmin = await managementService.isAdmin(userId);
+  logger.info(`User ${userId} isAdmin: ${isAdmin}`);
+  
+  if (isAdmin) {
     return next();
   } else {
     logger.warn(`Unauthorized access attempt by user ${userId}`);
-    return ctx.reply('У вас нет прав для выполнения этой команды.');
+    return ctx.reply('У вас нет прав для использования этого бота.');
   }
+});
+
+// 4. Обработчики команд
+adminBot.command('start', async (ctx) => {
+  logger.info('Start command received in admin bot');
+  await ctx.reply('Добро пожаловать в панель администратора!');
 });
 
 adminBot.command('stats', async (ctx) => {
@@ -172,4 +198,19 @@ adminBot.command('getlog', async (ctx) => {
   }
 });
 
-module.exports = adminBot;
+// В начале файла после создания бота
+adminBot.on('message', (ctx) => {
+  logger.info('Received message:', ctx.message);
+});
+
+adminBot.catch((err) => {
+  logger.error('Error in admin bot:', err);
+});
+
+// Изменяем запуск бота
+try {
+  // Явно экспортируем бот до его запуска
+  module.exports = adminBot;
+} catch (err) {
+  logger.error('Error exporting admin bot:', err);
+}

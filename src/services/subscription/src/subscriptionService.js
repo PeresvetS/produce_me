@@ -53,28 +53,40 @@ module.exports = {
   async addSubscription(username, months) {
     logger.info(`Adding subscription for user: ${username}, months: ${months}`);
     try {
+      // Проверяем существование пользователя
       let user = await managementService.checkUserByUsername(username);
+      
       if (!user) {
         logger.info(`User ${username} not found. Creating new user.`);
         user = await managementService.createUserByUsername(username);
+        if (!user) {
+          throw new Error(`Failed to create user ${username}`);
+        }
       }
-  
-      let currentEnd = user.subscriptionEnd;
-      
-      const newEnd = currentEnd && moment(currentEnd).isAfter(moment())
-        ? moment(currentEnd).add(months, 'months')
+
+      logger.info(`User found/created:`, user);
+
+      // Вычисляем новую дату окончания подписки
+      const currentEnd = user.subscriptionEnd ? moment(user.subscriptionEnd) : moment();
+      const newEnd = currentEnd.isAfter(moment()) 
+        ? currentEnd.add(months, 'months')
         : moment().add(months, 'months');
-  
-      user = await prisma.user.update({
+
+      // Обновляем пользователя с новой датой подписки
+      const updatedUser = await prisma.user.update({
         where: { username: username },
-        data: { subscriptionEnd: newEnd.toDate() }
+        data: { 
+          subscriptionEnd: newEnd.toDate(),
+          // Добавляем дополнительные поля, если они требуются при создании
+          updatedAt: new Date()
+        }
       });
-  
-      logger.info(`Subscription added for user ${username} until ${newEnd.format('DD.MM.YYYY')}`);
+
+      logger.info(`Subscription updated for user ${username}:`, updatedUser);
       return `Подписка для пользователя @${username} успешно добавлена до ${newEnd.format('DD.MM.YYYY')}`;
     } catch (error) {
       logger.error('Error in addSubscription:', error);
-      throw error;
+      throw new Error(`Ошибка при добавлении подписки: ${error.message}`);
     }
   },
   

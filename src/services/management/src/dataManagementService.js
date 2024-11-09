@@ -35,19 +35,29 @@ async function createUserByUsername(username) {
   logger.info(`Creating new user: ${username}`);
 
   try {
-    await prisma.user.create({
+    const user = await prisma.user.create({
       data: {
         userId: `temp_${Date.now()}`, // Temporary userId, should be updated later
         username: username,
+        name: username,
         messageCount: 0,
         newDialogCount: 0,
-        totalTokensUsed: 0
+        totalTokensUsed: 0,
+        subscriptionEnd: null,
+        createdAt: new Date(),
+        updatedAt: new Date()
       }
     });
-    logger.info(`User created with username: ${username}`);
+    
+    logger.info(`User created with username: ${username}`, user);
+    return user;
+    
   } catch (error) {
     if (error.code === 'P2002') {
       logger.info(`User already exists with username: ${username}`);
+      return await prisma.user.findUnique({
+        where: { username: username }
+      });
     } else {
       logger.error('Error creating user:', error);
       throw error;
@@ -94,10 +104,10 @@ async function checkOrCreateUserByUsername(username) {
 
     if (!user) {
       user = await createUserByUsername(username);
-      return false;
+      logger.info(`Created new user with username: ${username}`);
+    } else {
+      logger.info(`User found with username: ${username}`);
     }
-
-    logger.info(`Created new user with username: ${username}`);
 
     return user;
   } catch (error) {

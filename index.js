@@ -21,8 +21,8 @@ const server = http.createServer((req, res) => {
   res.end('Bot server is running');
 });
 
-server.listen(process.env.PORT || 3000, () => {
-  console.log(`Server running on port ${process.env.PORT || 3000}`);
+server.listen(process.env.PORT || 4000, () => {
+  console.log(`Server running on port ${process.env.PORT || 4000}`);
 });
 
 console.log('Starting bots...');
@@ -49,44 +49,69 @@ async function checkBotToken(token, botName) {
 }
 
 async function startBot(bot, name) {
-  return new Promise((resolve, reject) => {
+  try {
+    if (!bot) {
+      throw new Error(`${name} is not initialized`);
+    }
+    
+    logger.info(`Starting ${name}...`);
+    
+    // Проверяем соединение
+    const me = await bot.api.getMe();
+    logger.info(`${name} connected as @${me.username}`);
+    
+    // Запускаем бота без ожидания
     bot.start({
-      onStart: (botInfo) => {
-        logger.info(`${name} @${botInfo.username} started`);
-        resolve();
-      },
-    }).catch(reject);
-  });
+      drop_pending_updates: true,
+      onStart: () => logger.info(`${name} is starting...`)
+    }).catch(error => {
+      logger.error(`Error in ${name} long polling:`, error);
+    });
+    
+    logger.info(`${name} started successfully`);
+  } catch (error) {
+    logger.error(`Error starting ${name}:`, error);
+    throw error;
+  }
 }
 
 async function startBots() {
   console.log('Inside startBots function');
-  const strategyBotTokenValid = await checkBotToken(config.strategyBotToken, 'Strategy Bot');
-  const producerBotTokenValid = await checkBotToken(config.producerBotToken, 'Producer Bot');
-  const marketerBotTokenValid = await checkBotToken(config.marketerBotToken, 'Marketer Bot');
-  const contentBotTokenValid = await checkBotToken(config.contentBotToken, 'Content Bot');
-  const sellerBotTokenValid = await checkBotToken(config.sellerBotToken, 'Seller Bot');
-  const cusdevBotTokenValid = await checkBotToken(config.cusdevBotToken, 'CusDev Bot');
-  const methoBotTokenValid = await checkBotToken(config.methoBotToken, 'Metho Bot');
-  const adminBotTokenValid = await checkBotToken(config.adminBotToken, 'Admin Bot');
-  const saleBotTokenValid = await checkBotToken(config.saleBotToken, 'Sale Bot');
-  console.log('tokens valid');
   
-  if (!producerBotTokenValid || !marketerBotTokenValid || !contentBotTokenValid || !cusdevBotTokenValid || !methoBotTokenValid || !adminBotTokenValid || !saleBotTokenValid || !sellerBotTokenValid) {
+  // Проверка токенов
+  const tokenChecks = await Promise.all([
+    checkBotToken(config.strategyBotToken, 'Strategy Bot'),
+    checkBotToken(config.producerBotToken, 'Producer Bot'),
+    checkBotToken(config.marketerBotToken, 'Marketer Bot'),
+    checkBotToken(config.contentBotToken, 'Content Bot'),
+    checkBotToken(config.sellerBotToken, 'Seller Bot'),
+    checkBotToken(config.cusdevBotToken, 'CusDev Bot'),
+    checkBotToken(config.methoBotToken, 'Metho Bot'),
+    checkBotToken(config.adminBotToken, 'Admin Bot'),
+    checkBotToken(config.saleBotToken, 'Sale Bot')
+  ]);
+
+  if (tokenChecks.some(valid => !valid)) {
     console.error('One or more bot tokens are invalid. Please check your configuration.');
     process.exit(1);
   }
 
+  console.log('All tokens valid');
+
   try {
-    await startBot(strategyBot, 'Strategy Bot');
-    await startBot(producerBot, 'Producer Bot');
-    await startBot(marketerBot, 'Marketer Bot');
-    await startBot(contentBot, 'Content Bot');
-    await startBot(cusdevBot, 'CusDev Bot');
-    await startBot(sellerBot, 'Seller Bot');
-    await startBot(methoBot, 'Metho Bot');
-    await startBot(adminBot, 'Admin Bot');
-    await startBot(saleBot, 'Sale Bot');
+    // Запускаем ботов параллельно
+    await Promise.all([
+      startBot(strategyBot, 'Strategy Bot'),
+      startBot(producerBot, 'Producer Bot'),
+      startBot(marketerBot, 'Marketer Bot'),
+      startBot(contentBot, 'Content Bot'),
+      startBot(cusdevBot, 'CusDev Bot'),
+      startBot(sellerBot, 'Seller Bot'),
+      startBot(methoBot, 'Metho Bot'),
+      startBot(adminBot, 'Admin Bot'),
+      startBot(saleBot, 'Sale Bot')
+    ]);
+
     console.log('All bots started successfully');
   } catch (error) {
     console.error('Error starting bots:', error);
