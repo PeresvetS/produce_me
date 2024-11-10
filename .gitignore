@@ -1,57 +1,26 @@
 # .gitignore
 
-# Зависимости
+# Dependencies
 node_modules/
-package-lock.json
+yarn-error.log
 
-# Логи
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# Файлы среды выполнения
-pids
-*.pid
-*.seed
-*.pid.lock
-
-# Директория для инструментальных средств покрытия кода
-coverage/
-
-# Файлы конфигурации
-.env
-.env.test
-.env.production
-
-# Кэш npm
-.npm
-
-# Кэш eslint
-.eslintcache
-
-# Файлы системы macOS
-.DS_Store
-
-# Файлы системы Windows
-Thumbs.db
-
-# Файлы IDE/редакторов
-.idea/
-.vscode/
-*.swp
-*.swo
-
-# Файлы сборки
+# Build
 dist/
 build/
 
-# Временные файлы
-tmp/
-temp/
+# Environment
+.env
+.env.local
+.env.*.local
 
-# Файлы кэша и логов, специфичные для вашего проекта
-data/
-subscription_cache.json
-message_log.json
+# Logs
+temp/logs/
+*.log
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
